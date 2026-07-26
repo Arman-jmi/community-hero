@@ -9,13 +9,15 @@ export function HeroSection() {
   return (
     <>
       {/* ─── Hero ────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[680px] lg:min-h-[800px] flex items-center pt-20 bg-white overflow-hidden">
+      {/* pt-20 = 80px = navbar height (h-20). No extra vertical padding so headline */}
+      {/* starts immediately below the nav bar. min-h uses svh for accurate viewport fill. */}
+      <section className="relative min-h-[85svh] lg:min-h-[90svh] flex items-center pt-20 bg-white overflow-hidden">
 
         {/* ── Grid: two columns on lg, stacked on mobile ─────────────────── */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 min-h-[inherit]">
 
           {/* ── Left: Text Content ─────────────────────────────────────────── */}
-          <div className="relative z-10 flex items-center max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-24 lg:col-span-1 lg:max-w-none lg:mx-0">
+          <div className="relative z-10 flex items-center max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:col-span-1 lg:max-w-none lg:mx-0">
             <div className="w-full max-w-xl">
 
               {/* Gemini Badge */}
@@ -107,7 +109,7 @@ export function HeroSection() {
           </div>
 
           {/* ── Right: Background Image ────────────────────────────────────── */}
-          <div className="relative hidden lg:block lg:col-span-1 min-h-[680px] lg:min-h-[800px]">
+          <div className="relative hidden lg:block lg:col-span-1 min-h-[85svh] lg:min-h-[90svh]">
             <Image
               src="/images/hero-bg.png"
               fill

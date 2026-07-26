@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Premium Green Theme Tokens */
+  /* Design System Tokens */
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-secondary: var(--surface-secondary);
@@ -39,61 +39,60 @@
 
 @layer base {
   :root {
-    /* Premium Green Theme Tokens */
-    --background: #F0FDF4; /* Soft Background */
-    --surface: #FFFFFF; /* Card Background */
-    --surface-secondary: #ECFDF5; 
-    --primary: #10B981;
+    /* ── Premium Clean Theme ─────────────────────────────────────────── */
+    --background: #FFFFFF;          /* Pure white — no tint */
+    --surface: #FFFFFF;             /* Card background */
+    --surface-secondary: #F8FAFC;   /* Subtle section alternation */
+    --primary: #10B981;             /* Emerald */
     --primary-hover: #059669;
-    --secondary: #34D399;
-    --accent: #6EE7B7;
-    --text-primary: #064E3B;
-    --text-secondary: #374151;
-    --muted: #6B7280;
-    --border: #D1FAE5;
-    --success: #16A34A;
+    --secondary: #F8FAFC;           /* Neutral — no green */
+    --accent: #10B981;              /* Same as primary */
+    --text-primary: #111827;        /* Near-black */
+    --text-secondary: #6B7280;      /* Cool gray */
+    --muted: #9CA3AF;
+    --border: #E5E7EB;              /* Neutral gray border */
+    --success: #10B981;
     --warning: #F59E0B;
     --danger: #EF4444;
 
     /* Legacy Aliases */
-    --foreground: #064E3B;
+    --foreground: #111827;
     --card: #FFFFFF;
-    --input: #D1FAE5;
+    --input: #E5E7EB;               /* Neutral gray inputs */
     --ring: #10B981;
 
-    /* Gradient & Glass */
-    --glass-bg: rgba(255, 255, 255, 0.92);
-    --glass-border: rgba(16, 185, 129, 0.12);
+    /* Glass — neutral, not green */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(0, 0, 0, 0.06);
     --gradient-start: #10B981;
     --gradient-mid: #34D399;
     --gradient-end: #6EE7B7;
   }
 
+  /* Dark mode — intentionally different, kept richer */
   .dark {
-    /* Dark Mode Inverse (Adapted for Green Theme) */
-    --background: #022C22;
-    --surface: #064E3B;
-    --surface-secondary: #065F46;
+    --background: #0F172A;
+    --surface: #1E293B;
+    --surface-secondary: #0F172A;
     --primary: #10B981;
     --primary-hover: #34D399;
-    --secondary: #059669;
+    --secondary: #1E293B;
     --accent: #34D399;
-    --text-primary: #ECFDF5;
-    --text-secondary: #A7F3D0;
-    --muted: #6EE7B7;
-    --border: #047857;
-    --success: #16A34A;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --muted: #64748B;
+    --border: #334155;
+    --success: #10B981;
     --warning: #F59E0B;
     --danger: #EF4444;
 
-    /* Legacy Aliases */
-    --foreground: #ECFDF5;
-    --card: #064E3B;
-    --input: #047857;
+    --foreground: #F1F5F9;
+    --card: #1E293B;
+    --input: #334155;
     --ring: #10B981;
 
-    --glass-bg: rgba(6, 78, 59, 0.92);
-    --glass-border: rgba(16, 185, 129, 0.2);
+    --glass-bg: rgba(30, 41, 59, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -108,53 +107,59 @@
     overflow-x: hidden;
     background-color: var(--background);
     color: var(--text-primary);
-    background-image: radial-gradient(circle at top left, var(--gradient-start) 0%, transparent 40%),
-                      radial-gradient(circle at bottom right, var(--gradient-end) 0%, transparent 40%);
-    /* Removed background-attachment:fixed — causes repaint bugs at Windows 125%/150% DPI scaling */
-    /* Font smoothing for premium typography */
+    /* Clean white — no colored radial blobs */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Base UI Components (Glass) */
+/* ── Glass utility — neutral white card ─────────────────────────────── */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
+/* Used in dark-background contexts (footer, etc.) */
 .glass-dark {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Typography Utilities */
+/* ── Premium card helper ─────────────────────────────────────────────── */
+.card-clean {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Typography Utilities ─────────────────────────────────────────────── */
 @layer utilities {
   .text-hero {
-    @apply text-5xl md:text-7xl font-extrabold tracking-tight text-text-primary;
+    @apply text-5xl md:text-7xl font-extrabold tracking-tight text-[#111827];
   }
   .text-page-title {
-    @apply text-3xl md:text-4xl font-bold tracking-tight text-text-primary;
+    @apply text-3xl md:text-4xl font-bold tracking-tight text-[#111827];
   }
   .text-section-title {
-    @apply text-2xl font-semibold text-text-primary tracking-tight;
+    @apply text-2xl font-semibold text-[#111827] tracking-tight;
   }
   .text-card-title {
-    @apply text-lg font-semibold text-text-primary;
+    @apply text-lg font-semibold text-[#111827];
   }
   .text-body {
-    @apply text-base text-text-secondary leading-relaxed;
+    @apply text-base text-[#6B7280] leading-relaxed;
   }
   .text-caption {
-    @apply text-sm text-text-secondary;
+    @apply text-sm text-[#6B7280];
   }
   .text-hint {
-    @apply text-xs text-muted font-medium;
+    @apply text-xs text-[#9CA3AF] font-medium;
   }
 }
