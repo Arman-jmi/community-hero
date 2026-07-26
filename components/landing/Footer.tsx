@@ -5,7 +5,7 @@ import { Shield, Globe, MessageSquare, Mail } from "lucide-react"
 export function Footer() {
  return (
  <footer className="border-t border-white/10 bg-black/40 backdrop-blur-xl">
- <div className="container mx-auto px-4 md:px-6 py-12">
+ <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
  <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
  
  <div className="md:col-span-1">

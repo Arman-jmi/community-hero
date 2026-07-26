@@ -52,7 +52,7 @@ export function LandingNavbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
-      <div className="mx-auto max-w-[1400px] h-20 flex items-center justify-between px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
         
         {/* Left: Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -64,8 +64,8 @@ export function LandingNavbar() {
           </span>
         </Link>
 
-        {/* Center: Links */}
-        <nav className="hidden lg:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+        {/* Center: Links — hidden below xl to avoid collision at 1366px */}
+        <nav className="hidden xl:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link 
               key={link.name} 

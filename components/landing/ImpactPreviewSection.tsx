@@ -8,7 +8,7 @@ import { CheckCircle, Leaf, Droplets } from "lucide-react"
 export function ImpactPreviewSection() {
  return (
  <section id="impact" className="py-24 sm:py-32 relative bg-black/40">
- <div className="container mx-auto px-4 md:px-6">
+ <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
  <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
  <motion.div 
  initial={{ opacity: 0, x: -20 }}

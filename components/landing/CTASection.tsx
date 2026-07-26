@@ -11,9 +11,9 @@ export function CTASection() {
  <section className="py-32 relative overflow-hidden">
  {/* Background Gradients */}
  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/20 pointer-events-none" />
- <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/20 rounded-full blur-[150px] pointer-events-none" />
+ <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,100vw)] h-[min(800px,100vw)] bg-accent/20 rounded-full blur-[150px] pointer-events-none" />
 
- <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
+ <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 relative z-10 text-center">
  <motion.div
  initial={{ opacity: 0, scale: 0.9 }}
  whileInView={{ opacity: 1, scale: 1 }}

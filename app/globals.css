@@ -101,13 +101,16 @@
   * {
     border-color: var(--color-border);
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
+    overflow-x: hidden;
     background-color: var(--background);
     color: var(--text-primary);
     background-image: radial-gradient(circle at top left, var(--gradient-start) 0%, transparent 40%),
                       radial-gradient(circle at bottom right, var(--gradient-end) 0%, transparent 40%);
-    background-size: cover;
-    background-attachment: fixed;
+    /* Removed background-attachment:fixed — causes repaint bugs at Windows 125%/150% DPI scaling */
     /* Font smoothing for premium typography */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

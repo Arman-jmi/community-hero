@@ -8,7 +8,7 @@ import { ShieldCheck, Map, Trophy, Star } from "lucide-react"
 export function MissionsSection() {
  return (
  <section id="missions" className="py-24 sm:py-32 relative overflow-hidden">
- <div className="container mx-auto px-4 md:px-6">
+ <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
  <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
  
  <div className="w-full lg:w-1/2 order-2 lg:order-1 relative flex justify-center">
