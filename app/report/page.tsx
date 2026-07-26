@@ -3,7 +3,7 @@ import { Navbar } from "@/components/navigation/navbar"
 import { PageContainer } from "@/components/layouts/page-container"
 
 export const metadata = {
- title: "Report an Issue | CommunityHero",
+ title: "Report an Issue | Civic Hero",
  description: "Submit a new civic issue using AI.",
 }
 

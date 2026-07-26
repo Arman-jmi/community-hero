@@ -370,7 +370,7 @@ export function RankingDashboard() {
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <SectionHeader
             icon={<Users className="w-5 h-5 text-emerald-600" />}
-            title="Top Community Heroes"
+            title="Top Civic Heroes"
             href="/leaderboard"
             linkLabel="Full Leaderboard"
           />

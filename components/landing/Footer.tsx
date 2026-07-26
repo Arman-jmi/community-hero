@@ -14,11 +14,11 @@ export function Footer() {
  <Shield className="h-5 w-5 text-foreground" />
  </div>
  <span className="font-bold text-xl tracking-tight text-foreground">
- CommunityHero
+ CivicHero
  </span>
  </Link>
  <p className="text-sm text-muted-foreground max-w-xs">
- AI-powered civic reporting platform turning citizens into community heroes.
+ AI-powered civic reporting platform turning citizens into civic heroes.
  </p>
  </div>
 
@@ -58,7 +58,7 @@ export function Footer() {
  </div>
  
  <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
- <p>© {new Date().getFullYear()} CommunityHero. All rights reserved.</p>
+ <p>© {new Date().getFullYear()} CivicHero. All rights reserved.</p>
  <p>Built for the Hackathon</p>
  </div>
  </div>

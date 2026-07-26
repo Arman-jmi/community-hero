@@ -86,7 +86,7 @@ export default function ProfilePage() {
 
   const xp = profile.xp || profile.totalXP || 0;
   const { level, progressXP, nextLevelXP, percentage, xpToNextLevel } = getLevelProgress(xp);
-  const displayName = profile.name || user.displayName || "Community Hero";
+  const displayName = profile.name || user.displayName || "Civic Hero";
   const firstInitial = displayName.charAt(0).toUpperCase();
 
   return (

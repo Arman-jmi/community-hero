@@ -39,7 +39,7 @@ export default function LoginPage() {
  return;
  }
 
- toast.success("Welcome back to Community Hero!");
+ toast.success("Welcome back to Civic Hero!");
  router.push("/dashboard");
  } catch (error: any) {
  toast.error(error.message || "Failed to login. Please try again.");

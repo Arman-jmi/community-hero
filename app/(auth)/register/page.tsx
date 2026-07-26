@@ -49,7 +49,7 @@ export default function RegisterPage() {
  className="bg-surface/90 dark:bg-surface/90 backdrop-blur-xl rounded-[2rem] p-8 shadow-xl border border-border"
  >
  <div className="text-center mb-8">
- <h1 className="text-page-title mb-2">Join Community Hero</h1>
+ <h1 className="text-page-title mb-2">Join Civic Hero</h1>
  <p className="text-body">Create an account to make a difference.</p>
  </div>
 

@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { NavigationWrapper } from "@/components/layout/NavigationWrapper";
 
 export const metadata = {
- title: "Community Hero",
+ title: "Civic Hero",
  description: "AI-Powered Hyperlocal Civic Problem Solver",
 };
 

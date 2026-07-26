@@ -47,7 +47,7 @@ export function CitizenNavbar() {
               <div className="w-9 h-9 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-bold shadow-md">
                 CH
               </div>
-              <span className="font-bold text-xl text-slate-800 hidden sm:block">Community Hero</span>
+              <span className="font-bold text-xl text-slate-800 hidden sm:block">Civic Hero</span>
             </Link>
           </div>
           

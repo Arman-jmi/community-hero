@@ -13,7 +13,7 @@ export function Navbar() {
  <header className="fixed top-0 left-0 right-0 z-40 h-16 glass border-b border-white/20 dark:border-white/10 px-4 md:px-8 flex items-center justify-between">
  <div className="flex items-center gap-4">
  <Link href="/" className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
- CommunityHero
+  Civic Hero
  </Link>
  </div>
 

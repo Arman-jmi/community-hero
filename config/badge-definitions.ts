@@ -87,7 +87,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "hero_reporter",
     name: "Hero Reporter",
-    description: "Report 25 issues — a true community hero.",
+    description: "Report 25 issues — a true civic hero.",
     icon: "🏆",
     category: "reporting",
     target: 25,
@@ -451,7 +451,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "welcome_hero",
     name: "Welcome Hero",
-    description: "Create your Community Hero account.",
+    description: "Create your Civic Hero account.",
     icon: "🎉",
     category: "milestone",
     target: 1,
@@ -461,7 +461,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "one_month_member",
     name: "One Month Member",
-    description: "30 days as a Community Hero member.",
+    description: "30 days as a Civic Hero member.",
     icon: "📅",
     category: "milestone",
     target: 30,
@@ -471,7 +471,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "one_year_member",
     name: "One Year Member",
-    description: "365 days as a Community Hero. Legendary loyalty.",
+    description: "365 days as a Civic Hero. Legendary loyalty.",
     icon: "🎂",
     category: "milestone",
     target: 365,
@@ -491,7 +491,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "actions_500",
     name: "500 Actions",
-    description: "Complete 500 total actions. You are a pillar of Community Hero.",
+    description: "Complete 500 total actions. You are a pillar of Civic Hero.",
     icon: "🚀",
     category: "milestone",
     target: 500,
@@ -533,7 +533,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "early_adopter",
     name: "Early Adopter",
-    description: "Among the first heroes to join Community Hero.",
+    description: "Among the first heroes to join Civic Hero.",
     icon: "🥚",
     category: "rare",
     target: 1,
@@ -553,7 +553,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "completionist",
     name: "The Completionist",
-    description: "Unlock every other badge available in Community Hero.",
+    description: "Unlock every other badge available in Civic Hero.",
     icon: "👑",
     category: "rare",
     target: 48, // Total badges minus this one

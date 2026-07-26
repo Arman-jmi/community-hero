@@ -100,7 +100,7 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-sm leading-tight text-white">Community Hero</p>
+            <p className="font-bold text-sm leading-tight text-white">Civic Hero</p>
             <p className="text-[11px] text-emerald-400 font-medium">Authority Portal</p>
           </div>
         </div>

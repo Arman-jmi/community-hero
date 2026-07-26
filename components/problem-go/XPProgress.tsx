@@ -23,7 +23,7 @@ export function XPProgress({ currentXP, level }: XPProgressProps) {
  </div>
  <div>
  <h3 className="font-bold text-gray-900 text-lg">Level {calculatedLevel}</h3>
- <p className="text-gray-600 text-sm">Community Hero</p>
+ <p className="text-gray-600 text-sm">Civic Hero</p>
  </div>
  </div>
  <div className="text-right">

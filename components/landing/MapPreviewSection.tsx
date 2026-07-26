@@ -303,7 +303,7 @@ export function MapPreviewSection() {
               <div className="flex flex-col items-center justify-center py-6 text-center h-full flex-1">
                 <ShieldAlert className="h-8 w-8 text-gray-400 mb-2" />
                 <p className="text-sm text-gray-700 font-medium mb-1">No verifications yet</p>
-                <p className="text-xs text-gray-500 mb-4">Verifications will appear here once community heroes start verifying issues.</p>
+                <p className="text-xs text-gray-500 mb-4">Verifications will appear here once civic heroes start verifying issues.</p>
                 <Link href="/map">
                   <Button variant="outline" size="sm" className="text-gray-700 border-gray-300 hover:bg-gray-50">Verify Nearby Issues</Button>
                 </Link>

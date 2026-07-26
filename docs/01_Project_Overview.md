@@ -1,4 +1,4 @@
-# Community Hero
+# Civic Hero
 
 ## Tagline
 
@@ -8,7 +8,7 @@
 
 # Project Vision
 
-Community Hero is an AI-powered platform that enables citizens to report, verify, track, and resolve civic infrastructure problems in their locality.
+Civic Hero is an AI-powered platform that enables citizens to report, verify, track, and resolve civic infrastructure problems in their locality.
 
 The platform leverages Artificial Intelligence, geolocation, community collaboration, and gamification to create a transparent, engaging, and efficient civic reporting ecosystem.
 
@@ -37,7 +37,7 @@ Citizens rarely receive updates, making them lose trust in the reporting system.
 
 # Solution
 
-Community Hero provides an AI-powered civic reporting platform where citizens can:
+Civic Hero provides an AI-powered civic reporting platform where citizens can:
 
 - Upload photos or videos of civic issues.
 - Automatically detect issue type using Gemini AI.

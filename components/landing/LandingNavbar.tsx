@@ -60,7 +60,7 @@ export function LandingNavbar() {
             <Shield className="h-5 w-5 fill-[#10B981] text-[#10B981]" />
           </div>
           <span className="font-extrabold text-xl tracking-tight text-[#052E16]">
-            CommunityHero
+            Civic Hero
           </span>
         </Link>
 

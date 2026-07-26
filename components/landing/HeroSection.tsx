@@ -57,7 +57,7 @@ export function HeroSection() {
             </div>
             <div>
               <div className="font-extrabold text-[#052E16] text-[15px] leading-tight">Join 1,800+</div>
-              <div className="text-[12px] text-gray-500 font-medium">Community Heroes</div>
+              <div className="text-[12px] text-gray-500 font-medium">Civic Heroes</div>
             </div>
           </div>
 
@@ -220,7 +220,7 @@ export function HeroSection() {
                 </div>
                 <div>
                   <div className="text-[28px] font-extrabold text-[#052E16] leading-none mb-1">1,800+</div>
-                  <div className="text-[14px] font-bold text-gray-800">Community Heroes</div>
+                  <div className="text-[14px] font-bold text-gray-800">Civic Heroes</div>
                   <div className="text-[12px] text-gray-500">Active volunteers</div>
                 </div>
               </div>

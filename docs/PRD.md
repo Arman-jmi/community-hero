@@ -1,20 +1,20 @@
-# Community Hero - Product Requirements Document (PRD)
+# Civic Hero - Product Requirements Document (PRD)
 
 Version: 1.1
 
 Project Type: AI-Powered Hyperlocal Civic Problem Solver
 
-Hackathon: Community Hero – Hyperlocal Problem Solver
+Hackathon: Civic Hero – Hyperlocal Problem Solver
 
 ---
 
 # 1. Executive Summary
 
-Community Hero is an AI-powered civic engagement platform that enables citizens to report, verify, track, and help resolve local infrastructure and public service issues.
+Civic Hero is an AI-powered civic engagement platform that enables citizens to report, verify, track, and help resolve local infrastructure and public service issues.
 
 The platform combines Artificial Intelligence, geolocation, community participation, gamification, and real-time analytics to improve transparency and accountability between citizens and municipal authorities.
 
-Unlike traditional complaint portals, Community Hero transforms citizens into active contributors by rewarding meaningful participation through experience points, badges, missions, and leaderboards.
+Unlike traditional complaint portals, Civic Hero transforms citizens into active contributors by rewarding meaningful participation through experience points, badges, missions, and leaderboards.
 
 Artificial Intelligence automatically analyzes uploaded images, categorizes issues, predicts severity, suggests the responsible department, detects duplicate reports, and provides actionable insights for authorities.
 
@@ -24,7 +24,7 @@ The platform is designed as a modern web application optimized for both desktop 
 
 # 2. Vision
 
-Create the smartest AI-powered civic engagement platform where every citizen becomes a Community Hero by helping identify, verify, and improve local infrastructure.
+Create the smartest AI-powered civic engagement platform where every citizen becomes a Civic Hero by helping identify, verify, and improve local infrastructure.
 
 ---
 
@@ -56,7 +56,7 @@ As a result, citizens lose confidence in reporting problems and many issues rema
 
 # 4. Solution
 
-Community Hero introduces an AI-powered reporting ecosystem.
+Civic Hero introduces an AI-powered reporting ecosystem.
 
 Citizens upload an image or video.
 
@@ -178,7 +178,7 @@ Citizens earn XP, points, badges, levels, and streaks for reporting and verifyin
 Users build a Trust Score based on the accuracy of their reports and verifications, making their future reports carry more weight in the system.
 
 ## Leaderboards
-Weekly and all-time leaderboards encourage participation by displaying the most active "Community Heroes."
+Weekly and all-time leaderboards encourage participation by displaying the most active "Civic Heroes."
 
 ## Impact Dashboard
 Visualizes community impact, such as Community Health Score, Resolution Rate, Heatmaps, Water Saved, Garbage Removed, Before & After Galleries, and AI Insights.

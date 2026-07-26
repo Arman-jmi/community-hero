@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
                 <Input 
                   type="email" 
                   required
-                  placeholder="admin@communityhero.org" 
+                  placeholder="admin@civichero.org" 
                   className="pl-10 h-12 border-slate-200 focus:border-blue-500"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

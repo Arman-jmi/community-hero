@@ -66,7 +66,7 @@ export default function RoleSelectionPage() {
           </motion.div>
 
           <motion.h1 variants={itemVariants} className="text-5xl sm:text-6xl lg:text-[72px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 mb-4 tracking-tight leading-[1.1]">
-            Community Hero
+            Civic Hero
           </motion.h1>
           
           <motion.h2 variants={itemVariants} className="text-2xl sm:text-3xl text-slate-600 font-light mb-8 max-w-xl">
@@ -93,7 +93,7 @@ export default function RoleSelectionPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <Users className="w-6 h-6 text-blue-500 mb-2 relative z-10" />
               <div className="text-2xl font-bold text-slate-900 mb-1 relative z-10">2,500+</div>
-              <div className="text-xs text-slate-500 uppercase tracking-wider relative z-10">Community Heroes</div>
+              <div className="text-xs text-slate-500 uppercase tracking-wider relative z-10">Civic Heroes</div>
             </div>
 
             <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-purple-200 hover:shadow-md transition-all">

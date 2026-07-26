@@ -17,7 +17,7 @@ const MOTIVATIONAL = [
   "You're making a real difference. Don't stop now!",
   "Your city is better because of you. Keep going!",
   "One more report closer to the top. You've got this!",
-  "Your community heroes celebrate your contributions!",
+  "Your civic heroes celebrate your contributions!",
 ]
 
 export function LevelProgressCard({ level, currentXp, globalRank, delay = 0 }: LevelProgressCardProps) {
