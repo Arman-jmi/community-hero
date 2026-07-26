@@ -3,7 +3,7 @@
 import * as React from "react"
 import { motion } from "framer-motion"
 import { IssueReport } from "@/types/issue"
-import { MapPin, Navigation, ShieldAlert, ArrowLeft, Camera, User, AlertTriangle, Coins } from "lucide-react"
+import { MapPin, Navigation, ShieldAlert, ShieldCheck, ArrowLeft, Camera, User, AlertTriangle, Coins } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -15,9 +15,12 @@ interface MissionDetailsProps {
 }
 
 const VERIFICATION_RADIUS = 1000; // meters
+const VERIFICATION_THRESHOLD = 5;
 
 export function MissionDetails({ mission, distance, onBack, onStartVerification }: MissionDetailsProps) {
  const isOutOfRange = distance > VERIFICATION_RADIUS
+ const verificationCount = mission.verificationCount ?? 0
+ const progressPercent = Math.min((verificationCount / VERIFICATION_THRESHOLD) * 100, 100)
  
  const openMaps = () => {
    const url = `https://www.google.com/maps/search/?api=1&query=${mission.location.lat},${mission.location.lng}`;
@@ -65,6 +68,28 @@ export function MissionDetails({ mission, distance, onBack, onStartVerification 
    <Badge variant="success" className="flex items-center gap-1">
      <Coins className="w-3 h-3" /> +50 XP Reward
    </Badge>
+ </div>
+
+ {/* Community Verification Progress */}
+ <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 mb-6">
+ <div className="flex items-center justify-between mb-3">
+ <h4 className="text-sm font-bold text-gray-900 flex items-center">
+ <ShieldCheck className="h-4 w-4 mr-2 text-emerald-500" />
+ Community Verification
+ </h4>
+ <span className="text-sm font-bold text-emerald-700">{verificationCount} / {VERIFICATION_THRESHOLD} Verified</span>
+ </div>
+ <div className="w-full h-2.5 bg-emerald-100 rounded-full overflow-hidden">
+ <div
+ className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-700 ease-out"
+ style={{ width: `${progressPercent}%` }}
+ />
+ </div>
+ <p className="text-xs text-emerald-600 mt-2">
+ {verificationCount >= VERIFICATION_THRESHOLD
+ ? "This issue has been fully verified by the community."
+ : `${VERIFICATION_THRESHOLD - verificationCount} more verification${VERIFICATION_THRESHOLD - verificationCount === 1 ? '' : 's'} needed.`}
+ </p>
  </div>
 
  <p className="text-gray-700 mb-6 line-clamp-3 leading-relaxed">{mission.description || 'No description provided.'}</p>

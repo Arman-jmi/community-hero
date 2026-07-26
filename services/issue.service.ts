@@ -1,6 +1,8 @@
 import { IssueReport } from "@/types/issue";
 import { db } from "@/lib/firebase/config";
-import { addDoc, collection, Timestamp } from "firebase/firestore";
+import { addDoc, collection, Timestamp, doc, updateDoc, increment } from "firebase/firestore";
+import { awardXP } from "@/services/xp.service";
+import { XP_VALUES } from "@/utils/xpConstants";
 
 export const compressImageToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -68,8 +70,30 @@ export async function submitIssueReport(report: IssueReport, image: File): Promi
 
   try {
     console.log("Saving Firestore...");
-    await addDoc(collection(db, "reports"), reportToSave);
+    const docRef = await addDoc(collection(db, "reports"), reportToSave);
     console.log("Firestore saved");
+
+    // Award XP for report creation and increment reportsSubmitted
+    if (report.userId) {
+      try {
+        await awardXP(
+          report.userId,
+          "REPORT_CREATED",
+          XP_VALUES.REPORT_CREATED,
+          "Submitted a new issue report",
+          docRef.id
+        );
+        // Increment reportsSubmitted counter
+        const userRef = doc(db, "users", report.userId);
+        await updateDoc(userRef, {
+          reportsSubmitted: increment(1),
+          updatedAt: Timestamp.now(),
+        });
+      } catch (xpError) {
+        // Don't fail the report submission if XP award fails
+        console.error("Error awarding XP for report:", xpError);
+      }
+    }
   } catch (error) {
     console.error("Error submitting report to Firestore:", error);
     throw error;

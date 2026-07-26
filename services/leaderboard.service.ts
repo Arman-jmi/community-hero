@@ -19,24 +19,50 @@ export interface LeaderboardEntry {
 
 export async function getLeaderboard(timeframe: Timeframe, maxLimit: number = 100): Promise<LeaderboardEntry[]> {
   try {
+    const usersRef = collection(db, "users")
+    const allUsersSnap = await getDocs(usersRef)
+    const entries: LeaderboardEntry[] = []
+
     if (timeframe === 'all-time') {
-      const usersRef = collection(db, "users")
-      const q = query(usersRef, orderBy("xp", "desc"), limit(maxLimit))
-      const snapshot = await getDocs(q)
-      
-      return snapshot.docs.map((doc, index) => {
+      const sortedUsers = allUsersSnap.docs.map(doc => {
         const data = doc.data() as UserProfile
         return {
-          rank: index + 1,
           uid: data.uid,
           name: data.name || "Anonymous Hero",
           avatar: data.avatar,
-          xp: data.xp || 0,
-          reportsSubmitted: data.reportsSubmitted || 0,
-          reportsVerified: data.reportsVerified || 0,
-          badgesCount: data.badges?.length || 0
+          xp: data.xp || data.totalXP || 0,
+          reportsSubmitted: data.reportsApproved || 0, // Using approved reports instead of raw submitted reports
+          reportsVerified: data.successfulVerifications || data.reportsVerified || 0,
+          badgesCount: data.badges?.length || 0,
+          createdAt: data.createdAt
         }
       })
+
+      // Sort according to XP rules:
+      // 1. Total XP (Highest)
+      // 2. Successful Verifications
+      // 3. Approved Reports
+      // 4. Earliest Account Creation (Tie-breaker)
+      sortedUsers.sort((a, b) => {
+        if (b.xp !== a.xp) return b.xp - a.xp
+        if (b.reportsVerified !== a.reportsVerified) return b.reportsVerified - a.reportsVerified
+        if (b.reportsSubmitted !== a.reportsSubmitted) return b.reportsSubmitted - a.reportsSubmitted
+        
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0)
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0)
+        return timeA - timeB
+      })
+
+      return sortedUsers.slice(0, maxLimit).map((entry, index) => ({
+        rank: index + 1,
+        uid: entry.uid,
+        name: entry.name,
+        avatar: entry.avatar,
+        xp: entry.xp,
+        reportsSubmitted: entry.reportsSubmitted,
+        reportsVerified: entry.reportsVerified,
+        badgesCount: entry.badgesCount
+      }))
     } else {
       // Weekly or Monthly
       const now = new Date()
@@ -47,64 +73,49 @@ export async function getLeaderboard(timeframe: Timeframe, maxLimit: number = 10
         cutoffDate.setDate(now.getDate() - 30)
       }
 
-      const usersRef = collection(db, "users")
-      const allUsersSnap = await getDocs(usersRef)
-      const userMap = new Map<string, UserProfile>()
-      allUsersSnap.forEach(doc => {
-        userMap.set(doc.id, doc.data() as UserProfile)
-      })
+      for (const userDoc of allUsersSnap.docs) {
+        const data = userDoc.data() as UserProfile
+        const historyRef = collection(db, "users", userDoc.id, "xpHistory")
+        const historySnap = await getDocs(historyRef)
+        
+        let periodXp = 0
+        let periodVerifications = 0
+        let periodApprovedReports = 0
 
-      const verificationsRef = collection(db, "verifications")
-      const reportsRef = collection(db, "reports")
+        historySnap.forEach(docSnap => {
+          const entry = docSnap.data()
+          const createdAt = entry.createdAt?.toDate ? entry.createdAt.toDate() : new Date(entry.createdAt)
+          if (createdAt >= cutoffDate) {
+            periodXp += entry.xp || 0
+            if (entry.type === "VERIFICATION_COMPLETED") {
+              periodVerifications++
+            } else if (entry.type === "REPORT_APPROVED") {
+              periodApprovedReports++
+            }
+          }
+        })
 
-      const verifSnap = await getDocs(verificationsRef)
-      const reportsSnap = await getDocs(reportsRef)
-
-      const xpMap = new Map<string, number>()
-      const reportsMap = new Map<string, number>()
-      const verifiedMap = new Map<string, number>()
-
-      verifSnap.forEach(doc => {
-        const data = doc.data()
-        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
-        if (createdAt >= cutoffDate) {
-          const uid = data.userId
-          xpMap.set(uid, (xpMap.get(uid) || 0) + 25)
-          verifiedMap.set(uid, (verifiedMap.get(uid) || 0) + 1)
-        }
-      })
-
-      reportsSnap.forEach(doc => {
-        const data = doc.data()
-        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
-        if (createdAt >= cutoffDate) {
-          const uid = data.userId
-          xpMap.set(uid, (xpMap.get(uid) || 0) + 10)
-          reportsMap.set(uid, (reportsMap.get(uid) || 0) + 1)
-        }
-      })
-
-      const entries: LeaderboardEntry[] = []
-      
-      xpMap.forEach((xp, uid) => {
-        const user = userMap.get(uid)
-        if (user) {
+        if (periodXp > 0) {
           entries.push({
             rank: 0,
-            uid: uid,
-            name: user.name || "Anonymous Hero",
-            avatar: user.avatar,
-            xp: xp,
-            reportsSubmitted: reportsMap.get(uid) || 0,
-            reportsVerified: verifiedMap.get(uid) || 0,
-            badgesCount: user.badges?.length || 0
+            uid: data.uid,
+            name: data.name || "Anonymous Hero",
+            avatar: data.avatar,
+            xp: periodXp,
+            reportsSubmitted: periodApprovedReports,
+            reportsVerified: periodVerifications,
+            badgesCount: data.badges?.length || 0
           })
         }
+      }
+
+      // Sort weekly/monthly entries
+      entries.sort((a, b) => {
+        if (b.xp !== a.xp) return b.xp - a.xp
+        if (b.reportsVerified !== a.reportsVerified) return b.reportsVerified - a.reportsVerified
+        return b.reportsSubmitted - a.reportsSubmitted
       })
 
-      // Sort and assign ranks
-      entries.sort((a, b) => b.xp - a.xp)
-      
       const finalEntries = entries.slice(0, maxLimit).map((entry, index) => ({
         ...entry,
         rank: index + 1

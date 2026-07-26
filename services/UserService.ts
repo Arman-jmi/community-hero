@@ -16,12 +16,16 @@ export class UserService {
         let needsUpdate = false;
         const requiredDefaults = {
           xp: 0,
+          totalXP: data.xp ?? 0,
           level: 1,
           trustScore: 100,
           reportsSubmitted: 0,
           reportsVerified: 0,
           fakeReports: 0,
           badges: [],
+          lastDailyReward: null,
+          reportsApproved: 0,
+          successfulVerifications: 0,
           createdAt: data.createdAt || Timestamp.now(),
           updatedAt: data.updatedAt || Timestamp.now()
         };
@@ -65,12 +69,16 @@ export class UserService {
         avatar,
         role: "citizen",
         xp: 0,
+        totalXP: 0,
         level: 1,
         trustScore: 100,
         reportsSubmitted: 0,
         reportsVerified: 0,
         fakeReports: 0,
         badges: [],
+        lastDailyReward: null,
+        reportsApproved: 0,
+        successfulVerifications: 0,
         createdAt: Timestamp.now() as any,
         updatedAt: Timestamp.now() as any
       };

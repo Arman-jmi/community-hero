@@ -30,7 +30,7 @@ export interface IssueReport {
   location: Location
   imageUrl: string // This will be the Cloud Storage URL after upload
   aiAnalysis?: AIAnalysisResult
-  status: "pending" | "verified" | "in_progress" | "resolved" | "rejected"
+  status: "pending" | "verified" | "in_progress" | "resolved" | "rejected" | "community_verified"
   adminArea?: string
   assignedDepartment?: string
   rejectionReason?: string
@@ -39,4 +39,9 @@ export interface IssueReport {
   resolvedAt?: Date
   createdAt?: Date
   updatedAt?: Date
+  // Community verification tracking (Problem GO)
+  verificationCount?: number
+  verifiedBy?: string[]
+  communityVerified?: boolean
+  problemGoVisible?: boolean
 }

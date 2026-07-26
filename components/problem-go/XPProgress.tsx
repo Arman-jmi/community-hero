@@ -3,6 +3,7 @@
 import * as React from "react"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
+import { getLevelProgress } from "@/utils/xp-helpers"
 
 interface XPProgressProps {
  currentXP: number
@@ -10,13 +11,8 @@ interface XPProgressProps {
 }
 
 export function XPProgress({ currentXP, level }: XPProgressProps) {
- // Simple curve: 100 * level^1.5
- const xpForCurrentLevel = Math.floor(100 * Math.pow(level - 1, 1.5))
- const xpForNextLevel = Math.floor(100 * Math.pow(level, 1.5))
- 
- const progressToNext = currentXP - xpForCurrentLevel
- const totalRequired = xpForNextLevel - xpForCurrentLevel
- const percentage = Math.min(100, Math.max(0, (progressToNext / totalRequired) * 100))
+ const { level: calculatedLevel, progressXP, percentage, xpToNextLevel } = getLevelProgress(currentXP)
+ const totalRequired = progressXP + xpToNextLevel
 
  return (
  <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-md">
@@ -26,7 +22,7 @@ export function XPProgress({ currentXP, level }: XPProgressProps) {
  <Star className="h-6 w-6 text-primary" />
  </div>
  <div>
- <h3 className="font-bold text-gray-900 text-lg">Level {level}</h3>
+ <h3 className="font-bold text-gray-900 text-lg">Level {calculatedLevel}</h3>
  <p className="text-gray-600 text-sm">Community Hero</p>
  </div>
  </div>
@@ -46,7 +42,7 @@ export function XPProgress({ currentXP, level }: XPProgressProps) {
  </div>
  
  <div className="mt-2 text-right text-xs font-semibold text-gray-600">
- {totalRequired - progressToNext} XP to Level {level + 1}
+ {xpToNextLevel > 0 ? `${xpToNextLevel} XP to Level ${calculatedLevel + 1}` : "Max level achieved!"}
  </div>
  </div>
  )

@@ -1,7 +1,9 @@
 import { db } from "@/lib/firebase/config";
-import { collection, doc, getDocs, query, where, updateDoc, addDoc, Timestamp, orderBy, deleteDoc } from "firebase/firestore";
+import { collection, doc, getDocs, query, where, updateDoc, addDoc, Timestamp, orderBy, deleteDoc, getDoc } from "firebase/firestore";
 import { IssueReport } from "@/types/issue";
 import { AuditLog, AdminAction } from "@/types/audit";
+import { awardXP, deductXP, checkAreaBonus, checkMilestones } from "@/services/xp.service";
+import { XP_VALUES } from "@/utils/xpConstants";
 
 /**
  * Fetch reports for an admin, optionally filtered by area and status
@@ -67,13 +69,55 @@ export async function updateReportStatus(
     newStatus,
     notes
   });
+
+  // 3. XP hooks based on action
+  try {
+    const reportSnap = await getDoc(doc(db, "reports", reportId));
+    const reportData = reportSnap.exists() ? reportSnap.data() : null;
+    const reporterUserId = reportData?.userId;
+
+    if (reporterUserId) {
+      if (actionName === "approve") {
+        // Award REPORT_APPROVED XP
+        await awardXP(
+          reporterUserId,
+          "REPORT_APPROVED",
+          XP_VALUES.REPORT_APPROVED,
+          "Report approved by admin",
+          reportId
+        );
+        // Check for area bonus
+        const adminArea = reportData?.adminArea;
+        if (adminArea) {
+          await checkAreaBonus(reporterUserId, adminArea, reportId);
+        }
+        // Check milestones
+        await checkMilestones(reporterUserId, reportId);
+      } else if (actionName === "reject" && notes?.toLowerCase().includes("fake")) {
+        // Deduct XP for fake report
+        await deductXP(
+          reporterUserId,
+          "FAKE_REPORT",
+          Math.abs(XP_VALUES.FAKE_REPORT),
+          "Fake report penalty",
+          reportId
+        );
+      }
+    }
+  } catch (xpError) {
+    console.error("Error processing XP for admin action:", xpError);
+  }
 }
 
 /**
  * Permanently delete a fake/spam report
  */
 export async function deleteReport(reportId: string, adminInfo: { adminId: string; adminName: string; adminEmail: string }): Promise<void> {
+  // Read report before deleting to get userId for XP deduction
   const reportRef = doc(db, "reports", reportId);
+  const reportSnap = await getDoc(reportRef);
+  const reporterUserId = reportSnap.exists() ? reportSnap.data()?.userId : null;
+
   await deleteDoc(reportRef);
 
   await logAdminAction({
@@ -86,4 +130,19 @@ export async function deleteReport(reportId: string, adminInfo: { adminId: strin
     newStatus: "deleted",
     notes: "Permanently deleted report."
   });
+
+  // Deduct XP for fake/spam report
+  if (reporterUserId) {
+    try {
+      await deductXP(
+        reporterUserId,
+        "FAKE_REPORT",
+        Math.abs(XP_VALUES.FAKE_REPORT),
+        "Report deleted as fake/spam",
+        reportId
+      );
+    } catch (xpError) {
+      console.error("Error deducting XP for deleted report:", xpError);
+    }
+  }
 }

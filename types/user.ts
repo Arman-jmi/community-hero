@@ -10,6 +10,27 @@ export interface UserBadge {
   iconUrl?: string;
 }
 
+// XP transaction types for the history ledger
+export type XPTransactionType =
+  | "REPORT_CREATED"
+  | "REPORT_APPROVED"
+  | "VERIFICATION_COMPLETED"
+  | "HIGH_CONFIDENCE_BONUS"
+  | "AREA_BONUS"
+  | "DAILY_LOGIN"
+  | "MILESTONE"
+  | "FAKE_REPORT"
+  | "FAKE_VERIFICATION";
+
+export interface XPHistoryEntry {
+  id?: string;
+  type: XPTransactionType;
+  xp: number;
+  description: string;
+  issueId?: string;
+  createdAt: Timestamp | Date;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;
@@ -32,4 +53,11 @@ export interface UserProfile {
   badges: UserBadge[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+
+  // New XP system fields (optional for backward compat)
+  totalXP?: number;
+  lastDailyReward?: Timestamp | null;
+  reportsApproved?: number;
+  successfulVerifications?: number;
 }
+

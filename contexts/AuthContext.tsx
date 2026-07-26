@@ -41,6 +41,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userProfile = await UserService.getUserProfile(firebaseUser.uid);
           }
           setProfile(userProfile);
+
+          // Check daily login reward (once every 24 hours)
+          if (userProfile) {
+            try {
+              const { checkDailyLogin } = await import("@/services/xp.service");
+              const awarded = await checkDailyLogin(firebaseUser.uid);
+              if (awarded) {
+                const refreshedProfile = await UserService.getUserProfile(firebaseUser.uid);
+                if (refreshedProfile) {
+                  setProfile(refreshedProfile);
+                }
+              }
+            } catch (err) {
+              console.error("Error during daily login check:", err);
+            }
+          }
         } catch (error) {
           console.error("Error fetching user profile in auth context:", error);
           setProfile(null);

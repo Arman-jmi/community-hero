@@ -3,7 +3,7 @@
 import * as React from "react"
 import { motion } from "framer-motion"
 import { IssueReport } from "@/types/issue"
-import { MapPin, Navigation, Clock } from "lucide-react"
+import { MapPin, Navigation, Clock, ShieldCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 
@@ -13,11 +13,14 @@ interface MissionCardProps {
 }
 
 const VERIFICATION_RADIUS = 1000; // meters
+const VERIFICATION_THRESHOLD = 5;
 
 export function MissionCard({ mission, distance }: MissionCardProps) {
  const router = useRouter()
  const isOutOfRange = distance > VERIFICATION_RADIUS
  const isHigh = mission.severity === "High" || mission.severity === "Critical"
+ const verificationCount = mission.verificationCount ?? 0
+ const progressPercent = Math.min((verificationCount / VERIFICATION_THRESHOLD) * 100, 100)
 
  return (
  <motion.div
@@ -47,7 +50,7 @@ export function MissionCard({ mission, distance }: MissionCardProps) {
  <span className="flex items-center"><Clock className="h-3 w-3 mr-1 text-gray-400" /> {mission.createdAt ? new Date(mission.createdAt as any).toLocaleDateString() : 'Just now'}</span>
  </div>
  </div>
- 
+
  <div className="flex items-center justify-between mt-2">
  <span className={`text-sm font-bold flex items-center ${isOutOfRange ? "text-red-600" : "text-green-600"}`}>
  <Navigation className="h-3 w-3 mr-1" />
@@ -57,8 +60,28 @@ export function MissionCard({ mission, distance }: MissionCardProps) {
  <Badge variant="success" className="px-2 text-[10px]">+50 XP</Badge>
  </div>
  </div>
+
+ {/* Community Verification Progress */}
+ <div className="mt-2">
+ <div className="flex items-center justify-between mb-1">
+ <span className="flex items-center text-xs font-semibold text-gray-600">
+ <ShieldCheck className="h-3 w-3 mr-1 text-emerald-500" />
+ Community Verification
+ </span>
+ <span className="text-xs font-bold text-gray-700">{verificationCount} / {VERIFICATION_THRESHOLD}</span>
+ </div>
+ <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+ <motion.div
+ initial={{ width: 0 }}
+ animate={{ width: `${progressPercent}%` }}
+ transition={{ duration: 0.6, ease: "easeOut" }}
+ className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500"
+ />
+ </div>
+ </div>
  </div>
  </div>
  </motion.div>
  )
 }
+

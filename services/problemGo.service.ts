@@ -1,13 +1,17 @@
 "use server"
 
 import { db } from "@/lib/firebase/config"
-import { collection, query, where, getDocs, addDoc, Timestamp, doc, getDoc, updateDoc, increment } from "firebase/firestore"
+import { collection, query, where, getDocs, addDoc, Timestamp, doc, getDoc, updateDoc, increment, runTransaction, arrayUnion } from "firebase/firestore"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { IssueReport } from "@/types/issue"
 import { GeminiVerificationResult, VerificationRecord, VerificationStatus } from "@/types/problem-go"
+import { awardXP } from "@/services/xp.service"
+import { XP_VALUES } from "@/utils/xpConstants"
 
 const API_KEY = process.env.GEMINI_API_KEY || ""
 const genAI = new GoogleGenerativeAI(API_KEY)
+
+const COMMUNITY_VERIFICATION_THRESHOLD = 5
 
 export async function fetchUnresolvedIssues(): Promise<IssueReport[]> {
   try {
@@ -21,11 +25,18 @@ export async function fetchUnresolvedIssues(): Promise<IssueReport[]> {
         id: docSnap.id,
         ...data,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+        // Safe defaults for community verification fields
+        verificationCount: data.verificationCount ?? 0,
+        verifiedBy: data.verifiedBy ?? [],
+        communityVerified: data.communityVerified ?? false,
+        problemGoVisible: data.problemGoVisible ?? true,
       } as IssueReport);
     });
     
-    return issues;
+    // Filter out issues that have been community verified (5/5)
+    // This removes them from Problem GO only — they remain in all other views
+    return issues.filter(issue => issue.communityVerified !== true);
   } catch (error) {
     console.error("Error fetching unresolved issues:", error);
     return [];
@@ -42,7 +53,12 @@ export async function getIssueById(id: string): Promise<IssueReport | null> {
         id: docSnap.id,
         ...data,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+        // Safe defaults for community verification fields
+        verificationCount: data.verificationCount ?? 0,
+        verifiedBy: data.verifiedBy ?? [],
+        communityVerified: data.communityVerified ?? false,
+        problemGoVisible: data.problemGoVisible ?? true,
       } as IssueReport;
     }
     return null;
@@ -86,10 +102,48 @@ export async function verifyIssue(
 
   if (!newBase64Image) throw new Error("No verification image provided.");
 
+  // ── 1. Duplicate check using Firestore transaction ──
+  // This atomically checks and updates the verification counter
+  const issueRef = doc(db, "reports", issueId);
+  
+  await runTransaction(db, async (transaction) => {
+    const issueSnap = await transaction.get(issueRef);
+    if (!issueSnap.exists()) {
+      throw new Error("Issue not found.");
+    }
+
+    const issueData = issueSnap.data();
+    const verifiedBy: string[] = issueData.verifiedBy ?? [];
+
+    // Check for duplicate verification
+    if (verifiedBy.includes(userId)) {
+      throw new Error("DUPLICATE_VERIFICATION");
+    }
+
+    const currentCount = issueData.verificationCount ?? 0;
+    const newCount = currentCount + 1;
+
+    // Prepare the update
+    const updatePayload: Record<string, any> = {
+      verificationCount: newCount,
+      verifiedBy: arrayUnion(userId),
+      updatedAt: Timestamp.now(),
+    };
+
+    // Check if threshold is reached
+    if (newCount >= COMMUNITY_VERIFICATION_THRESHOLD) {
+      updatePayload.communityVerified = true;
+      updatePayload.problemGoVisible = false;
+      updatePayload.status = "community_verified";
+    }
+
+    transaction.update(issueRef, updatePayload);
+  });
+
+  // ── 2. Process images and call Gemini AI ──
   console.log("Original image loaded");
   console.log("Verification image converted");
 
-  // 1. Process original image (might be legacy URL or base64 data URI)
   let originalBase64 = "";
   let originalMimeType = "image/jpeg";
   
@@ -106,12 +160,10 @@ export async function verifyIssue(
     originalMimeType = originalRes.headers.get("content-type") || "image/jpeg";
   }
 
-  // 2. Process new image
   const parts = newBase64Image.split(",");
   const newMimeType = parts[0].split(":")[1].split(";")[0];
   const newBase64 = parts[1];
 
-  // 3. Call Gemini API for Verification
   const modelName = "gemini-2.5-flash";
   console.log("Starting verification");
   console.log("Original image size:", originalBase64.length);
@@ -148,7 +200,7 @@ export async function verifyIssue(
     throw error;
   }
 
-  // 4. Save Verification to Firestore
+  // ── 3. Save Verification Record to Firestore ──
   const verificationRecord: VerificationRecord = {
     issueId,
     userId,
@@ -160,32 +212,29 @@ export async function verifyIssue(
 
   await addDoc(collection(db, "verifications"), verificationRecord);
 
-  // 4. Calculate XP
-  let xpAwarded = 25; // Base for Verification
-  
-  const verificationsQuery = query(collection(db, "verifications"), where("issueId", "==", issueId));
-  const verificationsSnap = await getDocs(verificationsQuery);
-  if (verificationsSnap.size <= 1) { 
-    xpAwarded += 10;
-  }
+  // ── 4. Award XP using centralized XP service ──
+  let xpAwarded = 0;
 
+  // Base verification XP
+  const baseResult = await awardXP(
+    userId,
+    "VERIFICATION_COMPLETED",
+    XP_VALUES.VERIFICATION_COMPLETED,
+    "Community verification completed",
+    issueId
+  );
+  xpAwarded += XP_VALUES.VERIFICATION_COMPLETED;
+
+  // High-confidence bonus
   if (geminiResult.confidence >= 90) {
-    xpAwarded += 5;
-  }
-
-  if (geminiResult.status === "Fully Resolved") {
-    xpAwarded += 50;
-  }
-
-  // 5. Update User XP
-  const userRef = doc(db, "users", userId);
-  const userSnap = await getDoc(userRef);
-  
-  if (userSnap.exists()) {
-    await updateDoc(userRef, {
-      xp: increment(xpAwarded),
-      reportsVerified: increment(1)
-    });
+    await awardXP(
+      userId,
+      "HIGH_CONFIDENCE_BONUS",
+      XP_VALUES.HIGH_CONFIDENCE_BONUS,
+      "High-confidence verification bonus",
+      issueId
+    );
+    xpAwarded += XP_VALUES.HIGH_CONFIDENCE_BONUS;
   }
 
   return { result: geminiResult, xpEarned: xpAwarded };

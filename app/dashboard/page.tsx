@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { logoutUser } from "@/lib/firebase/auth";
 import { toast } from "sonner";
-import { LogOut, User, MapPin, AlertTriangle, ShieldCheck, ClipboardList, Trophy, BarChart3, Medal, MapPinned, Map, ChevronRight } from "lucide-react";
+import { LogOut, User, AlertTriangle, ShieldCheck, ClipboardList, Trophy, BarChart3, Medal, MapPinned, Map, ChevronRight } from "lucide-react";
 
 import { useIssues } from "@/hooks/useIssues";
 import { Badge } from "@/components/ui/badge";
@@ -133,9 +133,9 @@ export default function DashboardPage() {
 
           <Link href="/problem-go" className="block h-full">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-full">
-              <Card className="h-full cursor-pointer group hover:border-primary transition-colors bg-white shadow-sm border border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
-                <div className="bg-primary text-primary rounded-full w-12 h-12 flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
-                  <MapPin className="h-6 w-6" />
+              <Card className="h-full cursor-pointer group hover:border-emerald-500 transition-colors bg-white shadow-sm border border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-emerald-100 text-emerald-600 rounded-full w-12 h-12 flex items-center justify-center mb-3 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                  <MapPinned className="h-6 w-6" />
                 </div>
                 <h3 className="text-gray-800 font-bold">Problem GO</h3>
               </Card>

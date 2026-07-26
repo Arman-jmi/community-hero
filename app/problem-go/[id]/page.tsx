@@ -81,10 +81,15 @@ export default function MissionPage() {
       setRewardData({ xpAwarded: xpEarned, badgesUnlocked: [] }) // Add real badge logic if needed later
       setFlowState("RESULT")
       
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert("Verification failed. Please try again.")
-      setFlowState("CAMERA")
+      if (err?.message?.includes("DUPLICATE_VERIFICATION")) {
+        alert("You have already verified this issue.")
+        setFlowState("DETAILS")
+      } else {
+        alert("Verification failed. Please try again.")
+        setFlowState("CAMERA")
+      }
     }
   }
 

@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AuthoritySidebar } from "@/components/authority/layout/AuthoritySidebar";
+import { AuthorityHeader } from "@/components/authority/layout/AuthorityHeader";
 import { toast } from "sonner";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    console.log("[AdminLayout] useEffect running. loading:", loading, "user:", user?.uid, "profile:", profile?.role, "pathname:", pathname);
     if (!loading) {
       if (!user) {
         if (pathname !== "/admin/login") {
@@ -29,34 +30,52 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mx-auto mb-3" />
+          <p className="text-sm text-gray-500 font-medium">Loading Authority Portal...</p>
+        </div>
       </div>
     );
   }
 
-  // If on login page, don't show sidebar
+  // If on login page, don't show sidebar/header
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  // If authenticated but not authority, don't render content (redirect is handling it)
+  // Guard: not authorized
   if (!profile || profile.role !== "authority") {
-    console.log("[AdminLayout] Returning Access Denied instead of null because !profile or role is not authority. profile:", profile);
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-red-600 font-bold">
-        Access Denied or Profile Loading...
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Access Denied</h2>
+          <p className="text-gray-500 text-sm">You are not authorized to access this portal.</p>
+        </div>
       </div>
     );
   }
 
-  console.log("[AdminLayout] Rendering Admin Sidebar and children");
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar profile={profile} />
-      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 md:p-8">
-        {children}
-      </main>
+    <div className="min-h-screen bg-gray-50 flex" style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}>
+      {/* Sidebar */}
+      <AuthoritySidebar
+        profile={profile}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <AuthorityHeader
+          onMenuClick={() => setMobileMenuOpen(true)}
+        />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 xl:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
