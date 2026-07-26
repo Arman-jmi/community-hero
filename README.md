@@ -214,7 +214,7 @@ Authorities receive insights such as:
 
 # 📂 Project Structure
 
-```text
+
 # 📂 Project Structure
 
 ```text
