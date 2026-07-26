@@ -55,49 +55,50 @@ export function HeroSection() {
               </div>
 
               {/* Feature Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/50 p-2 rounded-[24px]">
+              {/* grid-cols-2 on mobile, auto-fit with min 170px on sm+ so all 4 sit in one row on desktop */}
+              <div className="grid grid-cols-2 sm:grid-cols-[repeat(4,minmax(170px,1fr))] gap-3 bg-white/50 p-2 rounded-[24px]">
 
                 {/* Problem GO */}
-                <Link href="/problem-go" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 hover:shadow-md transition-shadow">
-                  <div className="bg-[#E8F8F0] p-2 sm:p-2.5 rounded-full shrink-0">
-                    <MapPinned className="h-4 w-4 sm:h-5 sm:w-5 text-[#10B981]" />
+                <Link href="/problem-go" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-3 hover:shadow-md transition-shadow h-full">
+                  <div className="bg-[#E8F8F0] p-2.5 rounded-full shrink-0">
+                    <MapPinned className="h-5 w-5 text-[#10B981]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold text-[#052E16] text-[12px] sm:text-[13px] truncate">Problem GO</div>
-                    <div className="text-[10px] sm:text-[11px] text-gray-500 font-medium">Take missions</div>
+                  <div>
+                    <div className="font-extrabold text-[#052E16] text-[14px] leading-snug">Problem GO</div>
+                    <div className="text-[13px] text-gray-500 font-medium">Take missions</div>
                   </div>
                 </Link>
 
                 {/* Leaderboard */}
-                <Link href="/leaderboard" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 hover:shadow-md transition-shadow">
-                  <div className="bg-[#FFF8E6] p-2 sm:p-2.5 rounded-full shrink-0">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-[#F59E0B]" />
+                <Link href="/leaderboard" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-3 hover:shadow-md transition-shadow h-full">
+                  <div className="bg-[#FFF8E6] p-2.5 rounded-full shrink-0">
+                    <Trophy className="h-5 w-5 text-[#F59E0B]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold text-[#052E16] text-[12px] sm:text-[13px] truncate">Leaderboard</div>
-                    <div className="text-[10px] sm:text-[11px] text-gray-500 font-medium">Top heroes</div>
+                  <div>
+                    <div className="font-extrabold text-[#052E16] text-[14px] leading-snug">Leaderboard</div>
+                    <div className="text-[13px] text-gray-500 font-medium">Top heroes</div>
                   </div>
                 </Link>
 
                 {/* Ranking */}
-                <Link href="/ranking" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 hover:shadow-md transition-shadow">
-                  <div className="bg-[#E8F8F0] p-2 sm:p-2.5 rounded-full shrink-0">
-                    <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#10B981]" />
+                <Link href="/ranking" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-3 hover:shadow-md transition-shadow h-full">
+                  <div className="bg-[#E8F8F0] p-2.5 rounded-full shrink-0">
+                    <BarChart3 className="h-5 w-5 text-[#10B981]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold text-[#052E16] text-[12px] sm:text-[13px] truncate">Ranking</div>
-                    <div className="text-[10px] sm:text-[11px] text-gray-500 font-medium">See your rank</div>
+                  <div>
+                    <div className="font-extrabold text-[#052E16] text-[14px] leading-snug">Ranking</div>
+                    <div className="text-[13px] text-gray-500 font-medium">See your rank</div>
                   </div>
                 </Link>
 
                 {/* Awards */}
-                <Link href="/awards" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 hover:shadow-md transition-shadow">
-                  <div className="bg-[#FFF1E6] p-2 sm:p-2.5 rounded-full shrink-0">
-                    <Medal className="h-4 w-4 sm:h-5 sm:w-5 text-[#F97316]" />
+                <Link href="/awards" className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 flex items-center gap-3 hover:shadow-md transition-shadow h-full">
+                  <div className="bg-[#FFF1E6] p-2.5 rounded-full shrink-0">
+                    <Medal className="h-5 w-5 text-[#F97316]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold text-[#052E16] text-[12px] sm:text-[13px] truncate">Awards</div>
-                    <div className="text-[10px] sm:text-[11px] text-gray-500 font-medium">Earn badges</div>
+                  <div>
+                    <div className="font-extrabold text-[#052E16] text-[14px] leading-snug">Awards</div>
+                    <div className="text-[13px] text-gray-500 font-medium">Earn badges</div>
                   </div>
                 </Link>
 
