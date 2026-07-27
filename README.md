@@ -8,9 +8,9 @@ Civic Hero is an AI-powered platform that empowers citizens to report civic issu
 
 # 🔗 Project Links
 
-- 🌐 **Live Demo:** https://your-live-demo-link.com
-- 🎥 **Demo Video:** https://your-demo-video-link.com
-- 📑 **Presentation:** https://your-presentation-link.com
+- 🌐 **Live Demo:** https://civichero-hrnd.vercel.app/
+- 🎥 **Demo Video:**https://drive.google.com/file/d/1dyf1FD2gKvsf8QkqX83Tn-7_p4A1-0Nf/view
+
 
 ---
 
@@ -212,8 +212,6 @@ Authorities receive insights such as:
 
 ---
 
-# 📂 Project Structure
-
 
 # 📂 Project Structure
 
@@ -273,7 +271,7 @@ civic-hero/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/civic-hero.git
+git clone https://github.com/Arman-jmi/civichero
 ```
 
 ```bash
@@ -308,19 +306,6 @@ GOOGLE_GEMINI_API_KEY=
 GOOGLE_MAPS_API_KEY=
 ```
 
-### 4. Start the Development Server
-
-```bash
-npm run dev
-```
-
-Visit:
-
-```
-http://localhost:3000
-```
-
----
 
 # 🌐 Demo Access
 
@@ -351,7 +336,7 @@ The Authority Dashboard is protected and accessible only through authorized cred
 **Portal**
 
 ```
-https://your-live-demo-link.com/admin
+https://civichero-hrnd.vercel.app/admin/login
 ```
 
 **Email**
