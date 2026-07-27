@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, Bell, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { IssueReport } from "@/types/issue";
-import { formatDistanceToNow } from "date-fns";
+import { getTimeAgo } from "@/utils/timeAgo";
 
 interface AuthorityHeaderProps {
   reports?: IssueReport[];
@@ -22,83 +22,91 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/admin/settings": { title: "Settings", subtitle: "Profile & preferences" },
 };
 
-function getTimeAgo(createdAt: any): string {
-  if (!createdAt) return "";
-  try {
-    const date = createdAt?.toDate ? createdAt.toDate() : new Date(createdAt);
-    return formatDistanceToNow(date, { addSuffix: true });
-  } catch {
-    return "";
-  }
-}
-
-export function AuthorityHeader({ reports = [], onMenuClick }: AuthorityHeaderProps) {
+/**
+ * AuthorityHeader is memoized so it doesn't re-render when unrelated page-level
+ * state changes. Notifications and unreadCount are computed with useMemo.
+ */
+export const AuthorityHeader = React.memo(function AuthorityHeader({
+  reports = [],
+  onMenuClick,
+}: AuthorityHeaderProps) {
   const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
 
-  // Derive notifications from reports
-  const notifications = [
-    ...reports
-      .filter((r) => r.status === "pending")
-      .slice(0, 3)
-      .map((r) => ({
-        id: r.id!,
-        type: "pending" as const,
-        title: `New Report: ${r.title}`,
-        time: getTimeAgo(r.createdAt),
-        icon: Clock,
-        color: "text-amber-600",
-        bg: "bg-amber-50",
-      })),
-    ...reports
-      .filter((r) => r.severity === "Critical" || r.severity === "High")
-      .slice(0, 2)
-      .map((r) => ({
-        id: `crit-${r.id!}`,
-        type: "critical" as const,
-        title: `High Priority: ${r.title}`,
-        time: getTimeAgo(r.createdAt),
-        icon: AlertTriangle,
-        color: "text-red-600",
-        bg: "bg-red-50",
-      })),
-    ...reports
-      .filter((r) => r.status === "resolved")
-      .slice(0, 2)
-      .map((r) => ({
-        id: `res-${r.id!}`,
-        type: "resolved" as const,
-        title: `Resolved: ${r.title}`,
-        time: getTimeAgo(r.updatedAt || r.createdAt),
-        icon: CheckCircle2,
-        color: "text-green-600",
-        bg: "bg-green-50",
-      })),
-  ].slice(0, 7);
-
-  const unreadCount = Math.min(
-    reports.filter((r) => r.status === "pending").length,
-    9
+  // Derive notifications from reports — only recomputed when reports array changes.
+  const notifications = useMemo(
+    () =>
+      [
+        ...reports
+          .filter((r) => r.status === "pending")
+          .slice(0, 3)
+          .map((r) => ({
+            id: r.id!,
+            type: "pending" as const,
+            title: `New Report: ${r.title}`,
+            time: getTimeAgo(r.createdAt),
+            icon: Clock,
+            color: "text-amber-600",
+            bg: "bg-amber-50",
+          })),
+        ...reports
+          .filter((r) => r.severity === "Critical" || r.severity === "High")
+          .slice(0, 2)
+          .map((r) => ({
+            id: `crit-${r.id!}`,
+            type: "critical" as const,
+            title: `High Priority: ${r.title}`,
+            time: getTimeAgo(r.createdAt),
+            icon: AlertTriangle,
+            color: "text-red-600",
+            bg: "bg-red-50",
+          })),
+        ...reports
+          .filter((r) => r.status === "resolved")
+          .slice(0, 2)
+          .map((r) => ({
+            id: `res-${r.id!}`,
+            type: "resolved" as const,
+            title: `Resolved: ${r.title}`,
+            time: getTimeAgo(r.updatedAt || r.createdAt),
+            icon: CheckCircle2,
+            color: "text-green-600",
+            bg: "bg-green-50",
+          })),
+      ].slice(0, 7),
+    [reports]
   );
 
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-notif-panel]")) {
-        setNotifOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+  const unreadCount = useMemo(
+    () => Math.min(reports.filter((r) => r.status === "pending").length, 9),
+    [reports]
+  );
+
+  // Close notification panel on outside click — stable handler via useCallback.
+  const handleOutsideClick = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest("[data-notif-panel]")) {
+      setNotifOpen(false);
+    }
   }, []);
 
+  useEffect(() => {
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [handleOutsideClick]);
+
+  const toggleNotif = useCallback(() => setNotifOpen((prev) => !prev), []);
+  const closeNotif = useCallback(() => setNotifOpen(false), []);
+
   // Get page info
-  const pageInfo =
-    pageTitles[pathname] ||
-    (pathname.startsWith("/admin/reports/")
-      ? { title: "Report Details", subtitle: "Full report review" }
-      : { title: "Authority Portal", subtitle: "Municipal operations" });
+  const pageInfo = useMemo(
+    () =>
+      pageTitles[pathname] ||
+      (pathname.startsWith("/admin/reports/")
+        ? { title: "Report Details", subtitle: "Full report review" }
+        : { title: "Authority Portal", subtitle: "Municipal operations" }),
+    [pathname]
+  );
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 shadow-sm">
@@ -125,7 +133,7 @@ export function AuthorityHeader({ reports = [], onMenuClick }: AuthorityHeaderPr
         {/* Notification Bell */}
         <div className="relative" data-notif-panel>
           <button
-            onClick={() => setNotifOpen((prev) => !prev)}
+            onClick={toggleNotif}
             className="relative p-2.5 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
             aria-label="Notifications"
           >
@@ -159,8 +167,13 @@ export function AuthorityHeader({ reports = [], onMenuClick }: AuthorityHeaderPr
                   notifications.map((notif) => {
                     const Icon = notif.icon;
                     return (
-                      <div key={notif.id} className="px-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors">
-                        <div className={`w-8 h-8 rounded-full ${notif.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                      <div
+                        key={notif.id}
+                        className="px-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-full ${notif.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}
+                        >
                           <Icon className={`w-4 h-4 ${notif.color}`} />
                         </div>
                         <div className="min-w-0">
@@ -179,7 +192,7 @@ export function AuthorityHeader({ reports = [], onMenuClick }: AuthorityHeaderPr
                 <a
                   href="/admin/pending"
                   className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
-                  onClick={() => setNotifOpen(false)}
+                  onClick={closeNotif}
                 >
                   View all pending reports →
                 </a>
@@ -190,4 +203,4 @@ export function AuthorityHeader({ reports = [], onMenuClick }: AuthorityHeaderPr
       </div>
     </header>
   );
-}
+});

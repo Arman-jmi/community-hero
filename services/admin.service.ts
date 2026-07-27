@@ -1,16 +1,25 @@
 import { db } from "@/lib/firebase/config";
-import { collection, doc, getDocs, query, where, updateDoc, addDoc, Timestamp, orderBy, deleteDoc, getDoc } from "firebase/firestore";
+import { collection, doc, getDocs, query, where, updateDoc, addDoc, Timestamp, orderBy, limit as firestoreLimit, deleteDoc, getDoc } from "firebase/firestore";
 import { IssueReport } from "@/types/issue";
 import { AuditLog, AdminAction } from "@/types/audit";
 import { awardXP, deductXP, checkAreaBonus, checkMilestones } from "@/services/xp.service";
 import { XP_VALUES } from "@/utils/xpConstants";
 
 /**
- * Fetch reports for an admin, optionally filtered by area and status
+ * Fetch reports for an admin, optionally filtered by area and status.
+ * @param adminArea   - The admin's assigned zone (undefined = all zones).
+ * @param statusFilter - Only return reports with this status.
+ * @param maxResults  - Cap the number of results (Firestore-level LIMIT).
+ *                      Use this for dashboard previews to avoid fetching the
+ *                      full collection when only a handful of records are needed.
  */
-export async function getAdminReports(adminArea?: string, statusFilter?: string): Promise<IssueReport[]> {
+export async function getAdminReports(
+  adminArea?: string,
+  statusFilter?: string,
+  maxResults?: number
+): Promise<IssueReport[]> {
   const reportsRef = collection(db, "reports");
-  
+
   let q = query(reportsRef, orderBy("createdAt", "desc"));
 
   // If admin is assigned an area, filter by it (or just return all if not specified for a super admin)
@@ -20,6 +29,11 @@ export async function getAdminReports(adminArea?: string, statusFilter?: string)
 
   if (statusFilter && statusFilter !== "all") {
     q = query(q, where("status", "==", statusFilter));
+  }
+
+  // Apply server-side limit when the caller only needs a preview (e.g. dashboard).
+  if (maxResults && maxResults > 0) {
+    q = query(q, firestoreLimit(maxResults));
   }
 
   const snapshot = await getDocs(q);

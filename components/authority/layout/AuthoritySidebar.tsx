@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { UserProfile } from "@/types/user";
@@ -18,7 +18,6 @@ import {
   LogOut,
   Building2,
   ChevronRight,
-  Menu,
   X,
   Shield,
 } from "lucide-react";
@@ -55,18 +54,34 @@ const navItems = [
   },
 ];
 
-export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: AuthoritySidebarProps) {
+/**
+ * AuthoritySidebar is wrapped with React.memo so it does not re-render
+ * when parent page state changes (e.g. mobileMenuOpen toggling in layout).
+ * isActive is stable via useCallback, keyed only on pathname.
+ */
+export const AuthoritySidebar = React.memo(function AuthoritySidebar({
+  profile,
+  mobileOpen,
+  onMobileClose,
+}: AuthoritySidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogoutConfirm = async () => {
+  const isActive = useCallback(
+    (href: string) =>
+      pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href)),
+    [pathname]
+  );
+
+  const openLogout = useCallback(() => setShowLogoutConfirm(true), []);
+  const cancelLogout = useCallback(() => setShowLogoutConfirm(false), []);
+
+  const handleLogoutConfirm = useCallback(async () => {
     setLoggingOut(true);
     try {
-      console.log("Signing out...");
       await logoutUser();
-      console.log("Firebase signOut successful");
 
       // Clear all auth-related storage
       localStorage.clear();
@@ -75,7 +90,6 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
       toast.success("Logged out successfully.");
       setShowLogoutConfirm(false);
 
-      console.log("Redirecting to /login");
       // Hard redirect: forces a full page reload so all React/Firebase
       // in-memory state is wiped. replace() prevents Back-button re-entry.
       window.location.replace("/login");
@@ -86,10 +100,7 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
       toast.error(`Sign out failed: ${message}`);
       setLoggingOut(false);
     }
-  };
-
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+  }, []);
 
   const sidebarContent = (
     <aside className="flex flex-col h-full bg-gray-950 text-white">
@@ -176,7 +187,7 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
           </div>
         </div>
         <button
-          onClick={() => setShowLogoutConfirm(true)}
+          onClick={openLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-all duration-200 group"
         >
           <LogOut className="w-4.5 h-4.5 flex-shrink-0 transition-transform group-hover:translate-x-0.5" />
@@ -197,7 +208,7 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !loggingOut && setShowLogoutConfirm(false)}
+        onClick={() => !loggingOut && cancelLogout()}
       />
       {/* Dialog */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
@@ -217,7 +228,7 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
         {/* Actions */}
         <div className="flex gap-3 mt-1">
           <button
-            onClick={() => setShowLogoutConfirm(false)}
+            onClick={cancelLogout}
             disabled={loggingOut}
             className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50"
           >
@@ -271,4 +282,4 @@ export function AuthoritySidebar({ profile, mobileOpen, onMobileClose }: Authori
       {logoutModal}
     </>
   );
-}
+});

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import React from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { getAdminReports } from "@/services/admin.service";
-import { IssueReport } from "@/types/issue";
-import { Loader2, BarChart3, TrendingUp, PieChart, Activity } from "lucide-react";
+import { useAdminReports } from "@/hooks/useAdminReports";
+import { BarChart3, TrendingUp, PieChart, Activity } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -48,7 +48,20 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
-function StatCard({ title, value, subtitle, icon: Icon, color }: any) {
+// Memoized pure presentational components
+const StatCard = React.memo(function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: React.ElementType;
+  color: string;
+}) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <div className="flex items-start justify-between mb-3">
@@ -61,92 +74,142 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: any) {
       <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
     </div>
   );
-}
+});
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+const ChartCard = React.memo(function ChartCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <h3 className="font-bold text-gray-900 mb-5">{title}</h3>
       {children}
     </div>
   );
+});
+
+// Skeleton for loading state — avoids blank screen
+function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto animate-pulse">
+      <div>
+        <div className="h-7 w-32 bg-gray-200 rounded mb-2" />
+        <div className="h-4 w-64 bg-gray-100 rounded" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="w-10 h-10 bg-gray-100 rounded-2xl mb-3" />
+            <div className="h-8 w-16 bg-gray-200 rounded mb-1" />
+            <div className="h-3 w-24 bg-gray-100 rounded" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6">
+            <div className="h-5 w-40 bg-gray-200 rounded mb-5" />
+            <div className="h-60 bg-gray-100 rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function AdminAnalyticsPage() {
   const { profile } = useAuthContext();
-  const [reports, setReports] = useState<IssueReport[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      if (!profile) return;
-      try {
-        const data = await getAdminReports(profile.adminArea);
-        setReports(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [profile]);
+  // Shared cached fetch — won't re-fetch if dashboard already loaded data.
+  const { reports, loading } = useAdminReports();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
-          <p className="text-sm text-gray-400">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
+  // ── All chart data memoized — only recalculated when reports change ───────────
 
-  // Compute analytics data
-  const byCategory = Object.entries(
-    reports.reduce((acc: Record<string, number>, r) => {
-      acc[r.category] = (acc[r.category] || 0) + 1;
-      return acc;
-    }, {})
-  )
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
+  const byCategory = useMemo(
+    () =>
+      Object.entries(
+        reports.reduce((acc: Record<string, number>, r) => {
+          acc[r.category] = (acc[r.category] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count),
+    [reports]
+  );
 
-  const byStatus = Object.entries(
-    reports.reduce((acc: Record<string, number>, r) => {
-      acc[r.status] = (acc[r.status] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name: STATUS_LABELS[name] || name, value, key: name }));
+  const byStatus = useMemo(
+    () =>
+      Object.entries(
+        reports.reduce((acc: Record<string, number>, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1;
+          return acc;
+        }, {})
+      ).map(([name, value]) => ({ name: STATUS_LABELS[name] || name, value, key: name })),
+    [reports]
+  );
 
   // Daily reports for last 14 days
-  const now = new Date();
-  const daily = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - (13 - i));
-    const label = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
-    const count = reports.filter((r) => {
-      const cd = r.createdAt as any;
-      if (!cd) return false;
-      const rDate = cd?.toDate ? cd.toDate() : new Date(cd);
-      return rDate.toDateString() === d.toDateString();
-    }).length;
-    return { date: label, Reports: count };
-  });
+  const daily = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - (13 - i));
+      const label = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+      const dateStr = d.toDateString();
+      const count = reports.filter((r) => {
+        const cd = r.createdAt as unknown as { toDate?: () => Date };
+        if (!cd) return false;
+        const rDate = cd?.toDate ? cd.toDate() : new Date(r.createdAt as unknown as string);
+        return rDate.toDateString() === dateStr;
+      }).length;
+      return { date: label, Reports: count };
+    });
+  }, [reports]);
 
-  // Severity breakdown
-  const bySeverity = ["Critical", "High", "Medium", "Low"].map((s) => ({
-    name: s,
-    count: reports.filter((r) => r.severity === s).length,
-  }));
+  const bySeverity = useMemo(
+    () =>
+      ["Critical", "High", "Medium", "Low"].map((s) => ({
+        name: s,
+        count: reports.filter((r) => r.severity === s).length,
+      })),
+    [reports]
+  );
 
-  // Resolution rate
-  const resolved = reports.filter((r) => r.status === "resolved").length;
-  const total = reports.length;
-  const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-  const approvalRate =
-    total > 0 ? Math.round((reports.filter((r) => r.status !== "pending" && r.status !== "rejected").length / total) * 100) : 0;
+  const { total, resolutionRate, approvalRate, pendingCount } = useMemo(() => {
+    const total = reports.length;
+    const resolved = reports.filter((r) => r.status === "resolved").length;
+    const approved = reports.filter(
+      (r) => r.status !== "pending" && r.status !== "rejected"
+    ).length;
+    const pendingCount = reports.filter((r) => r.status === "pending").length;
+    return {
+      total,
+      resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
+      approvalRate: total > 0 ? Math.round((approved / total) * 100) : 0,
+      pendingCount,
+    };
+  }, [reports]);
+
+  // Category breakdown rows — memoized to avoid re-filtering on every render
+  const categoryRows = useMemo(
+    () =>
+      byCategory.map(({ name, count }) => {
+        const catReports = reports.filter((r) => r.category === name);
+        const catResolved = catReports.filter((r) => r.status === "resolved").length;
+        const catPending = catReports.filter((r) => r.status === "pending").length;
+        const catRate = count > 0 ? Math.round((catResolved / count) * 100) : 0;
+        return { name, count, catResolved, catPending, catRate };
+      }),
+    [byCategory, reports]
+  );
+
+  if (loading) {
+    return <AnalyticsSkeleton />;
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -162,7 +225,7 @@ export default function AdminAnalyticsPage() {
         <StatCard title="Total Reports" value={total} subtitle="All time" icon={BarChart3} color="bg-emerald-500" />
         <StatCard title="Resolution Rate" value={`${resolutionRate}%`} subtitle="Resolved vs total" icon={TrendingUp} color="bg-blue-500" />
         <StatCard title="Approval Rate" value={`${approvalRate}%`} subtitle="Approved vs total" icon={Activity} color="bg-purple-500" />
-        <StatCard title="Pending Queue" value={reports.filter((r) => r.status === "pending").length} subtitle="Awaiting review" icon={PieChart} color="bg-amber-500" />
+        <StatCard title="Pending Queue" value={pendingCount} subtitle="Awaiting review" icon={PieChart} color="bg-amber-500" />
       </div>
 
       {/* Charts Row 1 */}
@@ -180,15 +243,10 @@ export default function AdminAnalyticsPage() {
                 height={50}
               />
               <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-              />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
                 {byCategory.map((entry) => (
-                  <Cell
-                    key={entry.name}
-                    fill={CATEGORY_COLORS[entry.name] || "#10b981"}
-                  />
+                  <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name] || "#10b981"} />
                 ))}
               </Bar>
             </BarChart>
@@ -214,15 +272,10 @@ export default function AdminAnalyticsPage() {
                 labelLine={false}
               >
                 {byStatus.map((entry) => (
-                  <Cell
-                    key={entry.key}
-                    fill={STATUS_COLORS[entry.key] || "#6b7280"}
-                  />
+                  <Cell key={entry.key} fill={STATUS_COLORS[entry.key] || "#6b7280"} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-              />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
               <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
             </RechartsPieChart>
           </ResponsiveContainer>
@@ -244,9 +297,7 @@ export default function AdminAnalyticsPage() {
                 height={50}
               />
               <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-              />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
               <Line
                 type="monotone"
                 dataKey="Reports"
@@ -262,11 +313,7 @@ export default function AdminAnalyticsPage() {
         {/* By Severity */}
         <ChartCard title="Reports by Severity">
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart
-              data={bySeverity}
-              layout="vertical"
-              margin={{ top: 0, right: 20, left: 20, bottom: 0 }}
-            >
+            <BarChart data={bySeverity} layout="vertical" margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11, fill: "#6b7280" }} allowDecimals={false} />
               <YAxis
@@ -275,9 +322,7 @@ export default function AdminAnalyticsPage() {
                 tick={{ fontSize: 12, fill: "#374151", fontWeight: 600 }}
                 width={65}
               />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-              />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
               <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={32}>
                 <Cell fill="#7c3aed" />
                 <Cell fill="#ea580c" />
@@ -306,38 +351,32 @@ export default function AdminAnalyticsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {byCategory.map(({ name, count }) => {
-                const catReports = reports.filter((r) => r.category === name);
-                const catResolved = catReports.filter((r) => r.status === "resolved").length;
-                const catPending = catReports.filter((r) => r.status === "pending").length;
-                const catRate = count > 0 ? Math.round((catResolved / count) * 100) : 0;
-                return (
-                  <tr key={name} className="hover:bg-gray-50">
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: CATEGORY_COLORS[name] || "#10b981" }}
-                        />
-                        <span className="font-semibold text-gray-800">{name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5 text-right font-bold text-gray-900">{count}</td>
-                    <td className="px-6 py-3.5 text-right text-emerald-600 font-semibold">{catResolved}</td>
-                    <td className="px-6 py-3.5 text-right text-amber-600 font-semibold">{catPending}</td>
-                    <td className="px-6 py-3.5 text-right">
-                      <span
-                        className={`font-bold ${
-                          catRate >= 70 ? "text-emerald-600" : catRate >= 40 ? "text-amber-600" : "text-red-500"
-                        }`}
-                      >
-                        {catRate}%
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {byCategory.length === 0 && (
+              {categoryRows.map(({ name, count, catResolved, catPending, catRate }) => (
+                <tr key={name} className="hover:bg-gray-50">
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CATEGORY_COLORS[name] || "#10b981" }}
+                      />
+                      <span className="font-semibold text-gray-800">{name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 text-right font-bold text-gray-900">{count}</td>
+                  <td className="px-6 py-3.5 text-right text-emerald-600 font-semibold">{catResolved}</td>
+                  <td className="px-6 py-3.5 text-right text-amber-600 font-semibold">{catPending}</td>
+                  <td className="px-6 py-3.5 text-right">
+                    <span
+                      className={`font-bold ${
+                        catRate >= 70 ? "text-emerald-600" : catRate >= 40 ? "text-amber-600" : "text-red-500"
+                      }`}
+                    >
+                      {catRate}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {categoryRows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-gray-400">
                     No data available

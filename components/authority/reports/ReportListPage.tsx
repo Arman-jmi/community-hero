@@ -1,17 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { getAdminReports, updateReportStatus } from "@/services/admin.service";
+import { useAdminReports, invalidateAdminReportsCache } from "@/hooks/useAdminReports";
+import { updateReportStatus } from "@/services/admin.service";
 import { IssueReport } from "@/types/issue";
 import { ReportCard } from "@/components/authority/reports/ReportCard";
 import { toast } from "sonner";
-import {
-  Search,
-  Filter,
-  Loader2,
-  ClipboardList,
-} from "lucide-react";
+import { Search, Filter, ClipboardList } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,8 +32,12 @@ const SEVERITIES = ["All", "Critical", "High", "Medium", "Low"];
 
 export function ReportListPage({ statusFilter, title, subtitle, emptyMessage }: ReportListPageProps) {
   const { profile } = useAuthContext();
-  const [reports, setReports] = useState<IssueReport[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Shared cached fetch — no duplicate Firestore reads when navigating between pages.
+  const { reports, loading, refresh } = useAdminReports({
+    statusFilter: statusFilter !== "all" ? statusFilter : undefined,
+  });
+
   const [actionLoading, setActionLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -51,154 +51,142 @@ export function ReportListPage({ statusFilter, title, subtitle, emptyMessage }: 
   const [resolveReport, setResolveReport] = useState<IssueReport | null>(null);
   const [resolveNote, setResolveNote] = useState("");
 
-  const loadReports = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-    try {
-      const data = await getAdminReports(
-        profile.adminArea,
-        statusFilter !== "all" ? statusFilter : undefined
-      );
-      setReports(data);
-    } catch {
-      toast.error("Failed to load reports");
-    } finally {
-      setLoading(false);
-    }
-  }, [profile, statusFilter]);
+  // Stable adminInfo object — only rebuild when profile identity changes.
+  const adminInfo = useMemo(
+    () =>
+      profile
+        ? { adminId: profile.uid, adminName: profile.name, adminEmail: profile.email }
+        : null,
+    [profile?.uid, profile?.name, profile?.email] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
-  useEffect(() => {
-    loadReports();
-  }, [loadReports]);
+  // Memoised filtered list — only recomputed when filters or reports change.
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return reports.filter((r) => {
+      if (search && !r.title.toLowerCase().includes(searchLower) &&
+          !r.category.toLowerCase().includes(searchLower) &&
+          !(r.location?.address || "").toLowerCase().includes(searchLower)) {
+        return false;
+      }
+      if (categoryFilter !== "All" && r.category !== categoryFilter) return false;
+      if (severityFilter !== "All" && r.severity !== severityFilter) return false;
+      return true;
+    });
+  }, [reports, search, categoryFilter, severityFilter]);
 
-  const adminInfo = profile
-    ? { adminId: profile.uid, adminName: profile.name, adminEmail: profile.email }
-    : null;
+  // ── Action handlers — stable references via useCallback ───────────────────────
 
-  const handleApprove = async (report: IssueReport) => {
-    if (!adminInfo) return;
-    setActionLoading(true);
-    try {
-      await updateReportStatus(report.id!, report.status, "verified", adminInfo, {}, "approve");
-      setReports((prev) =>
-        prev.map((r) => (r.id === report.id ? { ...r, status: "verified" } : r))
-      );
-      toast.success("Report approved successfully.");
-    } catch {
-      toast.error("Failed to approve report.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const handleApprove = useCallback(
+    async (report: IssueReport) => {
+      if (!adminInfo) return;
+      setActionLoading(true);
+      try {
+        await updateReportStatus(report.id!, report.status, "verified", adminInfo, {}, "approve");
+        // Invalidate sibling caches so dashboard/analytics see fresh data on next visit.
+        invalidateAdminReportsCache(profile?.adminArea);
+        refresh();
+        toast.success("Report approved successfully.");
+      } catch {
+        toast.error("Failed to approve report.");
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [adminInfo, profile?.adminArea, refresh]
+  );
 
-  const handleRejectOpen = (report: IssueReport) => {
+  const handleRejectOpen = useCallback((report: IssueReport) => {
     setRejectReport(report);
     setRejectReason("");
-  };
+  }, []);
 
-  const handleRejectSubmit = async () => {
+  const handleRejectSubmit = useCallback(async () => {
     if (!adminInfo || !rejectReport) return;
     if (!rejectReason.trim()) {
       toast.error("Please provide a rejection reason.");
       return;
     }
+    const snapshot = rejectReport;
     setActionLoading(true);
     setRejectReport(null);
     try {
       await updateReportStatus(
-        rejectReport.id!,
-        rejectReport.status,
+        snapshot.id!,
+        snapshot.status,
         "rejected",
         adminInfo,
         { rejectionReason: rejectReason },
         "reject"
       );
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === rejectReport.id ? { ...r, status: "rejected", rejectionReason: rejectReason } : r
-        )
-      );
+      invalidateAdminReportsCache(profile?.adminArea);
+      refresh();
       toast.success("Report rejected.");
     } catch {
       toast.error("Failed to reject report.");
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [adminInfo, rejectReport, rejectReason, profile?.adminArea, refresh]);
 
-  const handleAssign = async (report: IssueReport) => {
-    if (!adminInfo) return;
-    const dept = report.aiAnalysis?.department || "General Services";
-    setActionLoading(true);
-    try {
-      await updateReportStatus(
-        report.id!,
-        report.status,
-        "in_progress",
-        adminInfo,
-        { assignedDepartment: dept },
-        "assign"
-      );
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === report.id ? { ...r, status: "in_progress", assignedDepartment: dept } : r
-        )
-      );
-      toast.success(`Assigned to ${dept}.`);
-    } catch {
-      toast.error("Failed to assign report.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const handleAssign = useCallback(
+    async (report: IssueReport) => {
+      if (!adminInfo) return;
+      const dept = report.aiAnalysis?.department || "General Services";
+      setActionLoading(true);
+      try {
+        await updateReportStatus(
+          report.id!,
+          report.status,
+          "in_progress",
+          adminInfo,
+          { assignedDepartment: dept },
+          "assign"
+        );
+        invalidateAdminReportsCache(profile?.adminArea);
+        refresh();
+        toast.success(`Assigned to ${dept}.`);
+      } catch {
+        toast.error("Failed to assign report.");
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [adminInfo, profile?.adminArea, refresh]
+  );
 
-  const handleResolveOpen = (report: IssueReport) => {
+  const handleResolveOpen = useCallback((report: IssueReport) => {
     setResolveReport(report);
     setResolveNote("");
-  };
+  }, []);
 
-  const handleResolveSubmit = async () => {
+  const handleResolveSubmit = useCallback(async () => {
     if (!adminInfo || !resolveReport) return;
     if (!resolveNote.trim()) {
       toast.error("Please provide a resolution note.");
       return;
     }
+    const snapshot = resolveReport;
     setActionLoading(true);
     setResolveReport(null);
     try {
       await updateReportStatus(
-        resolveReport.id!,
-        resolveReport.status,
+        snapshot.id!,
+        snapshot.status,
         "resolved",
         adminInfo,
         { resolutionNote: resolveNote, resolvedAt: new Date() },
         "resolve"
       );
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === resolveReport.id
-            ? { ...r, status: "resolved", resolutionNote: resolveNote }
-            : r
-        )
-      );
+      invalidateAdminReportsCache(profile?.adminArea);
+      refresh();
       toast.success("Report marked as resolved.");
     } catch {
       toast.error("Failed to resolve report.");
     } finally {
       setActionLoading(false);
     }
-  };
-
-  const filtered = reports.filter((r) => {
-    const matchSearch =
-      !search ||
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.category.toLowerCase().includes(search.toLowerCase()) ||
-      (r.location?.address || "").toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoryFilter === "All" || r.category === categoryFilter;
-    const matchSev = severityFilter === "All" || r.severity === severityFilter;
-    return matchSearch && matchCat && matchSev;
-  });
+  }, [adminInfo, resolveReport, resolveNote, profile?.adminArea, refresh]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

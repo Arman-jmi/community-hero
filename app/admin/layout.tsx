@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Stable callbacks — prevent AuthoritySidebar/AuthorityHeader from re-rendering
+  // whenever unrelated layout state changes.
+  const openMobileMenu = useCallback(() => setMobileMenuOpen(true), []);
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   useEffect(() => {
     if (!loading) {
@@ -64,14 +69,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <AuthoritySidebar
         profile={profile}
         mobileOpen={mobileMenuOpen}
-        onMobileClose={() => setMobileMenuOpen(false)}
+        onMobileClose={closeMobileMenu}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <AuthorityHeader
-          onMenuClick={() => setMobileMenuOpen(true)}
-        />
+        <AuthorityHeader onMenuClick={openMobileMenu} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 xl:p-8">
           {children}
         </main>

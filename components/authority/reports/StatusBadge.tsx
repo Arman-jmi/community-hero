@@ -34,7 +34,10 @@ const statusConfig: Record<string, { label: string; classes: string }> = {
   },
 };
 
-export function StatusBadge({ status, size = "md" }: StatusBadgeProps) {
+export const StatusBadge = React.memo(function StatusBadge({
+  status,
+  size = "md",
+}: StatusBadgeProps) {
   const config = statusConfig[status] ?? {
     label: status.replace(/_/g, " "),
     classes: "bg-gray-100 text-gray-700 border border-gray-200",
@@ -50,4 +53,4 @@ export function StatusBadge({ status, size = "md" }: StatusBadgeProps) {
       {config.label}
     </span>
   );
-}
+});

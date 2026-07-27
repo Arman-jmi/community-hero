@@ -1,106 +1,114 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { getAdminReports } from "@/services/admin.service";
+import { useMemo, useState, useCallback } from "react";
+import { useAdminReports } from "@/hooks/useAdminReports";
 import { IssueReport } from "@/types/issue";
-import { Loader2, MapPin, Filter, X } from "lucide-react";
+import {
+  GoogleMap,
+  useLoadScript,
+  Marker,
+  InfoWindow,
+} from "@react-google-maps/api";
+import { Loader2, MapPin, Filter, ExternalLink, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/authority/reports/StatusBadge";
 import { PriorityBadge } from "@/components/authority/reports/PriorityBadge";
+
+// Keep the libraries array stable outside the component to prevent
+// useLoadScript from reloading the Maps JS SDK on every render.
+const LIBRARIES: "places"[] = ["places"];
 
 const CATEGORIES = ["All", "Road", "Garbage", "Street Light", "Water", "Drainage", "Traffic", "Park", "Other"];
 
 const severityColors: Record<string, string> = {
   Critical: "#dc2626",
-  High: "#ea580c",
-  Medium: "#d97706",
-  Low: "#16a34a",
+  High:     "#ea580c",
+  Medium:   "#d97706",
+  Low:      "#16a34a",
 };
 
-const severityEmoji: Record<string, string> = {
-  Critical: "🔴",
-  High: "🟠",
-  Medium: "🟡",
-  Low: "🟢",
+const legend = [
+  { color: "#dc2626", label: "Critical" },
+  { color: "#ea580c", label: "High" },
+  { color: "#d97706", label: "Medium" },
+  { color: "#16a34a", label: "Low" },
+];
+
+const MAP_CONTAINER_STYLE = { width: "100%", height: "100%" };
+
+// Neutral light map options — keeps the existing Authority Portal look
+const MAP_OPTIONS: google.maps.MapOptions = {
+  disableDefaultUI: false,
+  zoomControl: true,
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: true,
+  clickableIcons: false,
 };
 
-function MapMarker({ report, onClick, selected }: { report: IssueReport; onClick: () => void; selected: boolean }) {
-  const color = severityColors[report.severity] || "#6b7280";
+// ── Fallback shown when the API key is missing or Maps fails to load ──────────
+function MapErrorFallback({ message }: { message: string }) {
   return (
-    <button
-      onClick={onClick}
-      title={report.title}
-      style={{
-        position: "absolute",
-        transform: "translate(-50%, -100%)",
-        cursor: "pointer",
-        zIndex: selected ? 10 : 5,
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50% 50% 50% 0",
-            backgroundColor: color,
-            transform: "rotate(-45deg)",
-            border: selected ? "3px solid white" : "2px solid white",
-            boxShadow: selected ? `0 0 0 3px ${color}` : "0 2px 8px rgba(0,0,0,0.3)",
-            transition: "all 0.2s",
-          }}
-        />
+    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+      <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+        <AlertTriangle className="w-6 h-6 text-gray-400" />
       </div>
-    </button>
+      <p className="text-gray-500 text-sm font-medium text-center max-w-xs">
+        {message}
+      </p>
+    </div>
   );
 }
 
 export default function AdminMapPage() {
-  const { profile } = useAuthContext();
-  const [reports, setReports] = useState<IssueReport[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Shared cached fetch — same hook used by dashboard / analytics
+  const { reports, loading: reportsLoading } = useAdminReports();
+
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedReport, setSelectedReport] = useState<IssueReport | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      if (!profile) return;
-      try {
-        const data = await getAdminReports(profile.adminArea);
-        setReports(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [profile]);
-
-  const filtered = reports.filter((r) => {
-    if (categoryFilter !== "All" && r.category !== categoryFilter) return false;
-    return r.location?.lat && r.location?.lng;
+  // Load Maps JavaScript API — identical pattern to CommunityMap.tsx / LocationPicker.tsx
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: LIBRARIES,
   });
 
-  // Compute bounds for the map
-  const hasReports = filtered.length > 0;
-  const centerLat = hasReports
-    ? filtered.reduce((sum, r) => sum + r.location.lat, 0) / filtered.length
-    : 28.6139;
-  const centerLng = hasReports
-    ? filtered.reduce((sum, r) => sum + r.location.lng, 0) / filtered.length
-    : 77.209;
+  const filtered = useMemo(
+    () =>
+      reports.filter(
+        (r) =>
+          (categoryFilter === "All" || r.category === categoryFilter) &&
+          r.location?.lat &&
+          r.location?.lng
+      ),
+    [reports, categoryFilter]
+  );
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // Dynamic map centre — average of visible markers, falls back to New Delhi
+  const center = useMemo<google.maps.LatLngLiteral>(() => {
+    if (filtered.length === 0) return { lat: 28.6139, lng: 77.209 };
+    return {
+      lat: filtered.reduce((s, r) => s + r.location.lat, 0) / filtered.length,
+      lng: filtered.reduce((s, r) => s + r.location.lng, 0) / filtered.length,
+    };
+  }, [filtered]);
 
-  // Legend
-  const legend = [
-    { color: "#dc2626", label: "Critical" },
-    { color: "#ea580c", label: "High" },
-    { color: "#d97706", label: "Medium" },
-    { color: "#16a34a", label: "Low" },
-  ];
+  const handleMarkerClick = useCallback((report: IssueReport) => {
+    setSelectedReport(report);
+  }, []);
+
+  const handleInfoClose = useCallback(() => {
+    setSelectedReport(null);
+  }, []);
+
+  const handleCategoryChange = useCallback((cat: string) => {
+    setCategoryFilter(cat);
+    setSelectedReport(null);
+  }, []);
+
+  // Determine map render state
+  const mapReady = !reportsLoading && isLoaded && !loadError;
+  const mapLoadError = !reportsLoading && (loadError || !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
@@ -119,7 +127,7 @@ export default function AdminMapPage() {
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
-              onClick={() => setCategoryFilter(cat)}
+              onClick={() => handleCategoryChange(cat)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 categoryFilter === cat
                   ? "bg-emerald-600 text-white shadow-sm"
@@ -130,7 +138,7 @@ export default function AdminMapPage() {
             </button>
           ))}
           <div className="ml-auto text-xs text-gray-400">
-            {loading ? "Loading..." : `${filtered.length} issues`}
+            {reportsLoading ? "Loading..." : `${filtered.length} issues`}
           </div>
         </div>
       </div>
@@ -138,42 +146,90 @@ export default function AdminMapPage() {
       {/* Map Area */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="relative" style={{ height: "560px" }}>
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+
+          {/* Loading state */}
+          {(reportsLoading || (!isLoaded && !loadError)) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
               <div className="text-center">
                 <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">Loading map data...</p>
-              </div>
-            </div>
-          ) : apiKey ? (
-            <iframe
-              title="City Issues Map"
-              src={`https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${centerLat},${centerLng}&zoom=12&maptype=roadmap`}
-              className="w-full h-full border-0"
-              loading="lazy"
-              allowFullScreen
-            />
-          ) : (
-            /* Fallback: Simple CSS-based visual map representation */
-            <div className="w-full h-full bg-gradient-to-br from-blue-50 to-emerald-50 relative overflow-hidden flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm font-medium">Map view requires Google Maps API key</p>
-                <p className="text-gray-400 text-xs mt-1">Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable</p>
+                <p className="text-sm text-gray-400">Loading map...</p>
               </div>
             </div>
           )}
 
-          {/* Floating Legend */}
-          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-3 z-10">
+          {/* Error state */}
+          {mapLoadError && (
+            <MapErrorFallback
+              message={
+                !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+                  ? "Map view requires a Google Maps API key. Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable."
+                  : "Unable to load Google Maps. Please check the Google Maps configuration."
+              }
+            />
+          )}
+
+          {/* Live map — rendered only when SDK is ready */}
+          {mapReady && (
+            <GoogleMap
+              mapContainerStyle={MAP_CONTAINER_STYLE}
+              center={center}
+              zoom={filtered.length > 0 ? 12 : 11}
+              options={MAP_OPTIONS}
+              onClick={handleInfoClose}
+            >
+              {filtered.map((report) => (
+                <Marker
+                  key={report.id}
+                  position={{ lat: report.location.lat, lng: report.location.lng }}
+                  title={report.title}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 9,
+                    fillColor: severityColors[report.severity] || "#6b7280",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                  }}
+                  onClick={() => handleMarkerClick(report)}
+                />
+              ))}
+
+              {selectedReport && (
+                <InfoWindow
+                  position={{
+                    lat: selectedReport.location.lat,
+                    lng: selectedReport.location.lng,
+                  }}
+                  onCloseClick={handleInfoClose}
+                >
+                  <div style={{ maxWidth: 220, fontFamily: "inherit" }}>
+                    <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: "#111827" }}>
+                      {selectedReport.title}
+                    </p>
+                    <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+                      {selectedReport.category} •{" "}
+                      {selectedReport.location?.address ||
+                        `${selectedReport.location?.lat?.toFixed(4)}, ${selectedReport.location?.lng?.toFixed(4)}`}
+                    </p>
+                    <a
+                      href={`/admin/reports/${selectedReport.id}`}
+                      style={{ fontSize: 11, color: "#059669", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      View Report →
+                    </a>
+                  </div>
+                </InfoWindow>
+              )}
+            </GoogleMap>
+          )}
+
+          {/* Floating Severity Legend */}
+          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-3 z-10 pointer-events-none">
             <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Severity</p>
             <div className="space-y-1.5">
               {legend.map(({ color, label }) => (
                 <div key={label} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: color }}
-                  />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-xs text-gray-600 font-medium">{label}</span>
                 </div>
               ))}

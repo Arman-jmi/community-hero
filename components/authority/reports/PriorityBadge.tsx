@@ -30,7 +30,10 @@ const severityConfig: Record<Severity, { label: string; classes: string; dot: st
   },
 };
 
-export function PriorityBadge({ severity, size = "md" }: PriorityBadgeProps) {
+export const PriorityBadge = React.memo(function PriorityBadge({
+  severity,
+  size = "md",
+}: PriorityBadgeProps) {
   const config = severityConfig[severity] ?? {
     label: severity,
     classes: "bg-gray-100 text-gray-700 border border-gray-200",
@@ -47,4 +50,4 @@ export function PriorityBadge({ severity, size = "md" }: PriorityBadgeProps) {
       {config.label}
     </span>
   );
-}
+});

@@ -10,6 +10,181 @@ import { updateReportStatus, deleteReport } from "@/services/admin.service";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
+import { GoogleMap, useLoadScript, Marker, InfoWindow } from "@react-google-maps/api";
+import React from "react";
+
+// Stable constants outside component — prevents SDK reload on every render
+const MAP_LIBRARIES: "places"[] = ["places"];
+const MAP_CONTAINER_STYLE: React.CSSProperties = { width: "100%", height: "100%" };
+
+interface ReportLocationMapProps {
+  lat: number;
+  lng: number;
+  title?: string;
+}
+
+/**
+ * Polished location map for the Authority Portal report details page.
+ * Uses the Maps JavaScript API (same pattern as the Citizen Portal).
+ * Features: satellite/roadmap toggle, all controls, marker tooltip,
+ *           smooth fade-in, loading skeleton, and clean error fallback.
+ */
+const ReportLocationMap = React.memo(function ReportLocationMap({
+  lat,
+  lng,
+  title,
+}: ReportLocationMapProps) {
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: MAP_LIBRARIES,
+  });
+
+  const [mapReady, setMapReady] = React.useState(false);
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [mapType, setMapType] = React.useState<"satellite" | "roadmap">("roadmap");
+
+  // Stable center — never changes for this render, avoids map re-centering on re-render
+  const center = React.useMemo(() => ({ lat, lng }), [lat, lng]);
+
+  const handleMapLoad = React.useCallback(() => {
+    // Brief delay so tiles visually finish loading before the fade-in
+    setTimeout(() => setMapReady(true), 300);
+  }, []);
+
+  const toggleMapType = React.useCallback(() => {
+    setMapType((prev) => (prev === "roadmap" ? "satellite" : "roadmap"));
+  }, []);
+
+  // ── Missing key ──────────────────────────────────────────────────────────────
+  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+          <MapPin className="w-5 h-5 text-gray-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-600">Unable to load map</p>
+          <p className="text-xs text-gray-400 mt-0.5">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SDK load error ───────────────────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+          <MapPin className="w-5 h-5 text-red-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-600">Unable to load map</p>
+          <p className="text-xs text-gray-400 mt-0.5">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Loading skeleton ─────────────────────────────────────────────────────────
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-full bg-gray-100 animate-pulse flex items-end justify-start p-3">
+        <div className="space-y-1.5">
+          <div className="h-2.5 w-24 bg-gray-200 rounded" />
+          <div className="h-2.5 w-16 bg-gray-200 rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Fade-in overlay — hides map until tiles are ready */}
+      {!mapReady && (
+        <div className="absolute inset-0 z-10 bg-gray-100 animate-pulse" />
+      )}
+
+      {/* Satellite / Roadmap toggle button */}
+      <button
+        onClick={toggleMapType}
+        className="absolute top-3 right-3 z-20 bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+        title="Toggle map type"
+      >
+        <span>{mapType === "roadmap" ? "🛰 Satellite" : "🗺 Map"}</span>
+      </button>
+
+      <div
+        style={{
+          opacity: mapReady ? 1 : 0,
+          transition: "opacity 0.35s ease",
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <GoogleMap
+          mapContainerStyle={MAP_CONTAINER_STYLE}
+          center={center}
+          zoom={16}
+          onLoad={handleMapLoad}
+          options={{
+            mapTypeId: mapType,
+            // All controls enabled
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,   // we use our own toggle
+            streetViewControl: false,
+            fullscreenControl: true,
+            scrollwheel: true,
+            disableDoubleClickZoom: false,
+            draggable: true,
+            clickableIcons: false,
+            // Subtle style only on roadmap view
+            styles: mapType === "roadmap" ? [
+              { featureType: "poi", stylers: [{ visibility: "off" }] },
+              { featureType: "transit", stylers: [{ visibility: "simplified" }] },
+            ] : [],
+          }}
+        >
+          {/* Custom emerald marker */}
+          <Marker
+            position={center}
+            title="Reported Location"
+            onClick={() => setShowTooltip((v) => !v)}
+            icon={{
+              path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+              fillColor: "#10b981",
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2,
+              scale: 2,
+              anchor: new google.maps.Point(12, 24),
+            }}
+          />
+
+          {/* Tooltip InfoWindow on marker click */}
+          {showTooltip && (
+            <InfoWindow
+              position={center}
+              onCloseClick={() => setShowTooltip(false)}
+              options={{ pixelOffset: new google.maps.Size(0, -40) }}
+            >
+              <div style={{ maxWidth: 180, fontFamily: "inherit" }}>
+                <p style={{ fontWeight: 700, fontSize: 12, color: "#111827", marginBottom: 2 }}>
+                  📍 Reported Location
+                </p>
+                {title && (
+                  <p style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4 }}>
+                    {title}
+                  </p>
+                )}
+              </div>
+            </InfoWindow>
+          )}
+        </GoogleMap>
+      </div>
+    </div>
+  );
+});
 import {
   ArrowLeft,
   MapPin,
@@ -182,7 +357,6 @@ export default function AdminReportDetailsPage() {
       ? report.imageUrl
       : "/pothole.jpg";
 
-  const googleMapsUrl = `https://www.google.com/maps/embed/v1/view?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&center=${report.location?.lat},${report.location?.lng}&zoom=16&maptype=satellite`;
   const mapsLinkUrl = `https://www.google.com/maps?q=${report.location?.lat},${report.location?.lng}`;
 
   return (
@@ -269,52 +443,89 @@ export default function AdminReportDetailsPage() {
             </div>
           </div>
 
-          {/* Location Card */}
+          {/* ── Location Card ─────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Card Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-emerald-600" />
               <h3 className="font-bold text-gray-900">Location</h3>
             </div>
-            <div className="p-5">
-              <p className="text-sm font-semibold text-gray-700 mb-1">
-                {report.location?.address || "Address not available"}
+
+            {/* Address block */}
+            <div className="px-6 pt-4 pb-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                Address
               </p>
-              <p className="text-xs text-gray-400 font-mono mb-4">
-                {report.location?.lat?.toFixed(6)}, {report.location?.lng?.toFixed(6)}
-              </p>
-              {/* Map Embed */}
-              <div className="h-52 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-                  <iframe
-                    title="Report Location"
-                    src={googleMapsUrl}
-                    className="w-full h-full border-0"
-                    loading="lazy"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                    <a
-                      href={mapsLinkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-600 font-medium hover:underline"
-                    >
-                      <MapPin className="w-4 h-4" />
-                      View on Google Maps →
-                    </a>
-                  </div>
+              <p className="text-sm font-semibold text-gray-800 leading-snug">
+                {report.location?.address || (
+                  <span className="text-gray-400 font-normal italic">Address unavailable</span>
                 )}
+              </p>
+              <div className="flex flex-col gap-0.5 mt-2">
+                <span className="text-xs text-gray-400 font-mono">
+                  <span className="text-gray-500 font-medium not-italic">Latitude: </span>
+                  {report.location?.lat?.toFixed(6)}
+                </span>
+                <span className="text-xs text-gray-400 font-mono">
+                  <span className="text-gray-500 font-medium not-italic">Longitude: </span>
+                  {report.location?.lng?.toFixed(6)}
+                </span>
               </div>
+            </div>
+
+            {/* Map — full-width, 420px tall, no horizontal padding */}
+            {report.location?.lat && report.location?.lng && (
+              <div
+                className="w-full overflow-hidden"
+                style={{ height: "420px" }}
+              >
+                <ReportLocationMap
+                  lat={report.location.lat}
+                  lng={report.location.lng}
+                  title={report.title}
+                />
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2">
               <a
                 href={mapsLinkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
               >
-                <MapPin className="w-3 h-3" />
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                 Open in Google Maps
               </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${report.location?.lat},${report.location?.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="3 11 22 2 13 21 11 13 3 11" />
+                </svg>
+                Get Directions
+              </a>
+              <button
+                onClick={() => {
+                  const coords = `${report.location?.lat?.toFixed(6)}, ${report.location?.lng?.toFixed(6)}`;
+                  navigator.clipboard.writeText(coords).then(() => {
+                    toast.success("Coordinates copied to clipboard");
+                  }).catch(() => {
+                    toast.error("Failed to copy coordinates");
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Copy Coordinates
+              </button>
             </div>
           </div>
 

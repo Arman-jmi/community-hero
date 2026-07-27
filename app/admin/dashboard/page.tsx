@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { getAdminReports } from "@/services/admin.service";
-import { IssueReport } from "@/types/issue";
-import { formatDistanceToNow } from "date-fns";
+import { useAdminReports } from "@/hooks/useAdminReports";
+import { getTimeAgo } from "@/utils/timeAgo";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -20,8 +19,11 @@ import {
 } from "lucide-react";
 import { StatusBadge } from "@/components/authority/reports/StatusBadge";
 import { PriorityBadge } from "@/components/authority/reports/PriorityBadge";
+import React from "react";
 
-function SkeletonCard() {
+// ─── Skeleton sub-components (stable references, not recreated on render) ──────
+
+const SkeletonCard = React.memo(function SkeletonCard() {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse">
       <div className="flex items-start justify-between">
@@ -34,118 +36,144 @@ function SkeletonCard() {
       </div>
     </div>
   );
-}
-
-function getTimeAgo(createdAt: any): string {
-  if (!createdAt) return "Unknown";
-  try {
-    const date = createdAt?.toDate ? createdAt.toDate() : new Date(createdAt);
-    return formatDistanceToNow(date, { addSuffix: true });
-  } catch {
-    return "Unknown";
-  }
-}
+});
 
 export default function AdminDashboardPage() {
   const { profile } = useAuthContext();
-  const [reports, setReports] = useState<IssueReport[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadReports() {
-      if (!profile) return;
-      try {
-        const data = await getAdminReports(profile.adminArea);
-        setReports(data);
-      } catch (error) {
-        console.error("[AdminDashboardPage] Failed to load reports:", error);
-      } finally {
-        setLoading(false);
+  // Single cached fetch — instant on re-navigation, deduplicated on first mount.
+  const { reports, loading } = useAdminReports();
+
+  // ── Greeting (only recomputed when the component first mounts) ────────────────
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
+  }, []);
+
+  const dateLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    []
+  );
+
+  // ── Derived stats — only recalculated when `reports` changes ─────────────────
+  const stats = useMemo(() => {
+    const today = new Date();
+
+    let pending = 0;
+    let approvedToday = 0;
+    let critical = 0;
+    let resolvedThisWeek = 0;
+    let inProgress = 0;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    for (const r of reports) {
+      if (r.status === "pending") pending++;
+      if (r.status === "in_progress") inProgress++;
+      if (r.severity === "Critical" || r.severity === "High") critical++;
+
+      if (r.status === "verified") {
+        const d = r.updatedAt as unknown as { toDate?: () => Date };
+        if (d) {
+          const date = d?.toDate ? d.toDate() : new Date(r.updatedAt as unknown as string);
+          if (date.toDateString() === today.toDateString()) approvedToday++;
+        }
+      }
+
+      if (r.status === "resolved") {
+        const d = r.resolvedAt as unknown as { toDate?: () => Date };
+        if (d) {
+          const date = d?.toDate ? d.toDate() : new Date(r.resolvedAt as unknown as string);
+          if (date >= weekAgo) resolvedThisWeek++;
+        }
       }
     }
-    loadReports();
-  }, [profile]);
 
-  const stats = {
-    pending: reports.filter((r) => r.status === "pending").length,
-    approvedToday: reports.filter((r) => {
-      if (r.status !== "verified") return false;
-      const d = r.updatedAt as any;
-      if (!d) return false;
-      const date = d?.toDate ? d.toDate() : new Date(d);
-      const today = new Date();
-      return date.toDateString() === today.toDateString();
-    }).length,
-    critical: reports.filter((r) => r.severity === "Critical" || r.severity === "High").length,
-    resolvedThisWeek: reports.filter((r) => {
-      if (r.status !== "resolved") return false;
-      const d = r.resolvedAt as any;
-      if (!d) return false;
-      const date = d?.toDate ? d.toDate() : new Date(d);
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      return date >= weekAgo;
-    }).length,
-    total: reports.length,
-    inProgress: reports.filter((r) => r.status === "in_progress").length,
-  };
+    return { pending, approvedToday, critical, resolvedThisWeek, inProgress, total: reports.length };
+  }, [reports]);
 
-  const kpiCards = [
-    {
-      label: "Pending Reports",
-      value: stats.pending,
-      icon: ClipboardList,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-      border: "border-amber-100",
-      trend: "Needs review",
-      href: "/admin/pending",
-    },
-    {
-      label: "Approved Today",
-      value: stats.approvedToday,
-      icon: CheckCircle2,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      border: "border-emerald-100",
-      trend: "Today's approvals",
-      href: "/admin/approved",
-    },
-    {
-      label: "Critical Issues",
-      value: stats.critical,
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bg: "bg-red-50",
-      border: "border-red-100",
-      trend: "High + Critical",
-      href: "/admin/pending",
-    },
-    {
-      label: "Resolved This Week",
-      value: stats.resolvedThisWeek,
-      icon: TrendingUp,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-      trend: "Last 7 days",
-      href: "/admin/resolved",
-    },
-    {
-      label: "In Progress",
-      value: stats.inProgress,
-      icon: Clock,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-      border: "border-purple-100",
-      trend: "Being worked on",
-      href: "/admin/in-progress",
-    },
-  ];
+  // ── KPI card configs — only rebuilt when stats changes ───────────────────────
+  const kpiCards = useMemo(
+    () => [
+      {
+        label: "Pending Reports",
+        value: stats.pending,
+        icon: ClipboardList,
+        color: "text-amber-600",
+        bg: "bg-amber-50",
+        border: "border-amber-100",
+        trend: "Needs review",
+        href: "/admin/pending",
+      },
+      {
+        label: "Approved Today",
+        value: stats.approvedToday,
+        icon: CheckCircle2,
+        color: "text-emerald-600",
+        bg: "bg-emerald-50",
+        border: "border-emerald-100",
+        trend: "Today's approvals",
+        href: "/admin/approved",
+      },
+      {
+        label: "Critical Issues",
+        value: stats.critical,
+        icon: AlertTriangle,
+        color: "text-red-600",
+        bg: "bg-red-50",
+        border: "border-red-100",
+        trend: "High + Critical",
+        href: "/admin/pending",
+      },
+      {
+        label: "Resolved This Week",
+        value: stats.resolvedThisWeek,
+        icon: TrendingUp,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
+        border: "border-blue-100",
+        trend: "Last 7 days",
+        href: "/admin/resolved",
+      },
+      {
+        label: "In Progress",
+        value: stats.inProgress,
+        icon: Clock,
+        color: "text-purple-600",
+        bg: "bg-purple-50",
+        border: "border-purple-100",
+        trend: "Being worked on",
+        href: "/admin/in-progress",
+      },
+    ],
+    [stats]
+  );
 
-  const recentReports = reports.slice(0, 6);
-  const highPriority = reports.filter((r) => r.severity === "Critical" || r.severity === "High").slice(0, 4);
-  const aiFlagged = reports.filter((r) => r.aiAnalysis?.duplicateReportPossibility).slice(0, 4);
-  const recentResolutions = reports.filter((r) => r.status === "resolved").slice(0, 4);
+  // ── Derived report lists — memoized, no repeated full-array iterations ────────
+  const recentReports = useMemo(() => reports.slice(0, 6), [reports]);
+
+  const highPriority = useMemo(
+    () =>
+      reports
+        .filter((r) => r.severity === "Critical" || r.severity === "High")
+        .slice(0, 4),
+    [reports]
+  );
+
+  const aiFlagged = useMemo(
+    () => reports.filter((r) => r.aiAnalysis?.duplicateReportPossibility).slice(0, 4),
+    [reports]
+  );
+
+  const recentResolutions = useMemo(
+    () => reports.filter((r) => r.status === "resolved").slice(0, 4),
+    [reports]
+  );
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -153,12 +181,12 @@ export default function AdminDashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 17 ? "Afternoon" : "Evening"},{" "}
+            Good {greeting},{" "}
             {profile?.name?.split(" ")[0] ?? "Officer"} 👋
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             Managing {profile?.adminArea || "all regions"} •{" "}
-            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {dateLabel}
           </p>
         </div>
         <Link
@@ -236,6 +264,7 @@ export default function AdminDashboardPage() {
                       src={report.imageUrl?.startsWith("blob:") ? "/pothole.jpg" : report.imageUrl}
                       alt=""
                       className="w-full h-full object-cover"
+                      loading="lazy"
                       onError={(e) => (e.currentTarget.src = "/pothole.jpg")}
                     />
                   </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { IssueReport } from "@/types/issue";
 import { StatusBadge } from "./StatusBadge";
 import { PriorityBadge } from "./PriorityBadge";
-import { formatDistanceToNow } from "date-fns";
+import { getTimeAgo } from "@/utils/timeAgo";
 import {
   MapPin,
   User,
@@ -28,17 +28,12 @@ interface ReportCardProps {
   loading?: boolean;
 }
 
-function getTimeAgo(createdAt: any): string {
-  if (!createdAt) return "Unknown";
-  try {
-    const date = createdAt?.toDate ? createdAt.toDate() : new Date(createdAt);
-    return formatDistanceToNow(date, { addSuffix: true });
-  } catch {
-    return "Unknown";
-  }
-}
-
-export function ReportCard({
+/**
+ * ReportCard is wrapped with React.memo so the grid does NOT re-render
+ * all cards when actionLoading toggles for a single card action.
+ * Callbacks are also stable (useCallback in parent) to prevent false changes.
+ */
+export const ReportCard = React.memo(function ReportCard({
   report,
   onApprove,
   onReject,
@@ -62,6 +57,7 @@ export function ReportCard({
           src={imageUrl}
           alt={report.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
           onError={(e) => (e.currentTarget.src = "/pothole.jpg")}
         />
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
@@ -91,7 +87,8 @@ export function ReportCard({
           <div className="flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             <span className="truncate">
-              {report.location?.address || `${report.location?.lat?.toFixed(4)}, ${report.location?.lng?.toFixed(4)}`}
+              {report.location?.address ||
+                `${report.location?.lat?.toFixed(4)}, ${report.location?.lng?.toFixed(4)}`}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -177,4 +174,4 @@ export function ReportCard({
       </div>
     </div>
   );
-}
+});
